@@ -65,16 +65,31 @@ form label{display:block;font-size:13px;color:var(--mut);margin-bottom:10px}
 fieldset{border:1px solid var(--line);border-radius:10px}
 fieldset legend{font-weight:600;color:var(--pri)}
 #laudo{display:none}
+#bnav,#more,#moreBg{display:none}
 @media (max-width:760px){
   .app{flex-direction:column}
-  #side{width:auto;height:auto;position:static;flex-direction:row;flex-wrap:wrap;align-items:center;padding:8px 12px;gap:4px 8px;border-right:0;border-bottom:1px solid var(--line)}
-  h1{margin:0;flex:1}h1::after{display:none}
-  nav{flex-direction:row;overflow-x:auto;order:3;flex-basis:100%;scrollbar-width:none}
-  nav button{white-space:nowrap;border-left:0;border-bottom:3px solid transparent;border-radius:6px 6px 0 0;padding:9px 10px}
-  nav button.active{border-bottom-color:var(--acc)}
-  .tools{margin:0;flex-direction:row;flex-wrap:wrap;border:0;padding:0}
-  .tools button{padding:6px 8px;font-size:13px}
+  /* topo enxuto: só marca + modo claro/escuro */
+  #side{width:auto;height:auto;position:sticky;top:0;z-index:10;flex-direction:row;align-items:center;justify-content:space-between;padding:6px 12px;gap:8px;border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+  #side h1{flex-direction:row;align-items:center;margin:0;gap:10px;font-size:17px}
+  #side h1 .brand{width:36px}
+  #side>nav,.tools button:not(#themeBtn){display:none}
+  .tools{margin:0;flex-direction:row;border:0;padding:0}
   main{padding:14px 12px}
+  /* barra inferior */
+  body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  #bnav{display:flex;flex-direction:row;gap:0;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--side);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 14px rgba(11,47,54,.08)}
+  #bnav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;padding:6px 2px;border:0;border-top:3px solid transparent;border-radius:0;background:none;color:var(--mut);font-size:11.5px;line-height:1.1}
+  #bnav svg,#more .mgrid svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #bnav button.active{color:var(--pri);font-weight:600;border-top-color:var(--acc);background:var(--tint)}
+  /* painel "Mais" */
+  #moreBg:not([hidden]){display:block;position:fixed;inset:0;z-index:40;background:rgba(7,30,35,.45)}
+  #more:not([hidden]){display:block;position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:45;background:var(--card);border-top:3px solid var(--acc);border-radius:16px 16px 0 0;padding:14px 14px 18px;max-height:calc(100vh - 140px);overflow-y:auto;box-shadow:0 -8px 24px rgba(0,0,0,.18)}
+  #more h2{margin:0 0 10px;font-size:16px}#more h3{margin:16px 0 8px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+  #more .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  #more .mgrid button{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:78px;padding:12px 4px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;font-size:13px}
+  #more .mgrid button.active{background:var(--tint);border-color:var(--acc);color:var(--pri);font-weight:600}
+  #more .mtools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #more .mtools button{font-size:13px}
   .two{grid-template-columns:1fr}
   button{min-height:40px}button.sm{min-height:36px}
   .alert{padding:10px 12px}
@@ -87,7 +102,8 @@ fieldset legend{font-weight:600;color:var(--pri)}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   :root,:root[data-theme=dark]{color-scheme:light!important;--bg:#fff;--card:#fff;--ink:#000}
   html,body{background:#fff!important;color:#000;font-family:Arial,Helvetica,sans-serif}
-  .app,dialog{display:none!important}
+  .app,dialog,#bnav,#more,#moreBg{display:none!important}
+  body{padding-bottom:0!important}
   #laudo{display:block;font-size:12px;line-height:1.4;color:#000}
   #laudo table.shell,#laudo table.shell>thead>tr>td,#laudo table.shell>tfoot>tr>td,#laudo table.shell>tbody>tr>td{border:0;padding:0;background:transparent;font-size:inherit}
   #laudo table.shell>thead{display:table-header-group}#laudo table.shell>tfoot{display:table-footer-group}

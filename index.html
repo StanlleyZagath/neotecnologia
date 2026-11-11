@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Neotecnologia</title>
 <script>try{var t=localStorage.getItem("neo.theme");document.documentElement.dataset.theme=t||"light"}catch(e){document.documentElement.dataset.theme="light"}</script>
 <link rel="stylesheet" href="style.css">
@@ -37,6 +37,33 @@
   <main id="view"></main>
 </div>
 </div>
+<!-- Menu do celular: barra inferior (4 atalhos + "Mais"). Fica oculto no computador. -->
+<div id="moreBg" hidden></div>
+<section id="more" hidden aria-label="Mais opções">
+  <h2>Mais seções</h2>
+  <div class="mgrid">
+    <button data-tab="cat"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>Catálogo</button>
+    <button data-tab="pad"><svg viewBox="0 0 24 24"><path d="M12 3v4M7 7h10l1 14H6zM9 12h6"/></svg>Padrões</button>
+    <button data-tab="ind"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Indicadores</button>
+    <button data-tab="cli"><svg viewBox="0 0 24 24"><path d="M3 21V8l7-4v17M10 21h11V11l-6-3M7 10v.01M7 14v.01M14 14v.01M14 18v.01"/></svg>Clientes</button>
+    <button data-tab="tec"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Técnicos</button>
+    <button data-tab="chk"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Checklists</button>
+  </div>
+  <h3>Ferramentas</h3>
+  <div class="mtools">
+    <button class="ghost" onclick="closeMore();editEmpresa()">Dados da empresa</button>
+    <button class="ghost" data-proxy="exportBtn">Exportar dados</button>
+    <button class="ghost" data-proxy="importBtn">Importar dados</button>
+    <button class="ghost" data-proxy="demoBtn">Dados de exemplo</button>
+  </div>
+</section>
+<nav id="bnav" aria-label="Menu principal">
+  <button data-tab="dashboard"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Painel</span></button>
+  <button data-tab="equip"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 21h8M12 16v5"/></svg><span>Equipam.</span></button>
+  <button data-tab="os"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/></svg><span>OS</span></button>
+  <button data-tab="prev"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Agenda</span></button>
+  <button id="moreBtn" aria-expanded="false" aria-controls="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg><span>Mais</span></button>
+</nav>
 <div id="laudo"></div>
 <dialog id="dlg"><form method="dialog" id="form"></form></dialog>
 <script src="vendor/pdf.min.js"></script>

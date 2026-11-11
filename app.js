@@ -127,7 +127,10 @@ const f1 = (n, s = '') => n == null ? '-' : n.toLocaleString('pt-BR', { maximumF
 
 // ---------- telas ----------
 function render() {
-  document.querySelectorAll('#nav button').forEach(b => { b.classList.toggle('active', b.dataset.tab === tab); b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'); });
+  document.querySelectorAll('#nav button, #bnav button[data-tab], #more .mgrid button').forEach(b => { b.classList.toggle('active', b.dataset.tab === tab); b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'); });
+  const prim = [...document.querySelectorAll('#bnav button[data-tab]')].some(b => b.dataset.tab === tab);
+  $('#moreBtn').classList.toggle('active', !prim);
+  closeMore();
   $('#view').innerHTML = ({ dashboard: vDash, equip: vEquip, os: vOS, pad: vPad, prev: vPrev, ind: vInd, cli: vCli, chk: vChk, cat: vCat, tec: vTec })[tab]();
   renderAlerts();
 }
@@ -574,6 +577,17 @@ function genOS(equipId, k) {
 
 // ---------- topo ----------
 $('#nav').onclick = e => { if (e.target.dataset.tab) { tab = e.target.dataset.tab; render(); } };
+// menu do celular (barra inferior + painel "Mais")
+function closeMore() { $('#more').hidden = true; $('#moreBg').hidden = true; $('#moreBtn').setAttribute('aria-expanded', 'false'); }
+$('#moreBtn').onclick = () => { const abrir = $('#more').hidden; closeMore(); if (abrir) { $('#more').hidden = false; $('#moreBg').hidden = false; $('#moreBtn').setAttribute('aria-expanded', 'true'); } };
+$('#moreBg').onclick = closeMore;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMore(); });
+$('#bnav').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) { tab = b.dataset.tab; render(); scrollTo(0, 0); } });
+$('#more').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.tab) { tab = b.dataset.tab; render(); scrollTo(0, 0); }
+  else if (b.dataset.proxy) { closeMore(); document.getElementById(b.dataset.proxy).click(); }
+});
 $('#exportBtn').onclick = async () => {
   const arquivos = {};
   for (const p of db.padroes) for (const c of arqsDe(p)) { const b = await getFile(c.fid).catch(() => null); if (b) arquivos[c.fid] = await blobB64(b); }
