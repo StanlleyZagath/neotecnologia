@@ -156,7 +156,7 @@ function uCalc(ev, d) {
 // g = nº do grupo (padrão/grandeza), i = nº do ponto
 const readRow = (g, i, r) => `<tr><td>${i + 1}</td>
   <td><input name="c${g}_rp_${i}" type="number" step="any" value="${esc(r.p)}"></td>
-  <td><input name="c${g}_re_${i}" placeholder="6,9; 7,0; 7,1" value="${esc((r.ev || (r.e != null ? [r.e] : [])).join('; ').replace(/\./g, ','))}"></td>
+  <td><input name="c${g}_re_${i}" inputmode="decimal" placeholder="ex.: 6,9" value="${esc((r.ev || (r.e != null ? [r.e] : [])).join('; ').replace(/\./g, ','))}"></td>
   <td><input name="c${g}_ru_${i}" type="number" step="any" placeholder="automático" value="${esc((r.uManual ?? (r.u != null)) ? r.u : '')}"></td></tr>`;
 function addReading(g) { const tb = $('#rd_' + g + ' tbody'); tb.insertAdjacentHTML('beforeend', readRow(g, tb.rows.length, {})); }
 // grupos de calibração: um por padrão/grandeza (até 3). OS antigas guardam um grupo só, nos campos da própria OS.
@@ -176,19 +176,18 @@ function calibBlock(o) {
    <div class="two">${fld(`c${i}_grandeza`, 'Grandeza (vazio = pelo tipo do padrão)', g.grandeza, 'text', `placeholder="${esc(GRANDEZA[pd.tipo] || '')}"`)}${fld(`c${i}_unidade`, 'Unidade das leituras', g.unidade || pd.unidade || (i ? '' : '°C'))}</div>
    <div class="two">${fld(`c${i}_resolucao`, 'Resolução do instrumento', g.resolucao)}${fld(`c${i}_faixaCol`, 'Faixa coletada (ex.: 2 à 8 °C)', g.faixaCol)}</div>
    <div class="two">${fld(`c${i}_ema`, 'Erro máximo admissível (±)', g.ema, 'number', 'step=any min=0')}${fld(`c${i}_uOutros`, 'Outras contribuições de incerteza (opcional)', g.uOutros, 'number', 'step=any min=0')}</div>
-   <table id="rd_${i}"><thead><tr><th>#</th><th>Valor nominal (padrão)</th><th>Leituras do equipamento (separe por ;)</th><th>U (vazio = automático)</th></tr></thead><tbody>${rows.map((r, j) => readRow(i, j, r)).join('')}</tbody></table>
+   <table id="rd_${i}"><thead><tr><th>#</th><th>Valor nominal (padrão)</th><th>Leitura do equipamento</th><th>U (vazio = automático)</th></tr></thead><tbody>${rows.map((r, j) => readRow(i, j, r)).join('')}</tbody></table>
    <p><button type="button" class="sm ghost" onclick="addReading(${i})">Adicionar ponto</button></p></fieldset>`;
   };
   return box('calib', 'Calibração', o.tipo === 'Calibração', `
    <div class="two">${sel('nPad', 'Quantidade de padrões / grandezas', ['1', '2', '3'], String(n), 'onchange="nPadSel(this.value)"')}${fld('kfat', 'Fator de abrangência (k)', o.kfat || 2, 'number', 'step=any min=1')}</div>
    ${db.padroes.some(p => (p.validade || '') < today()) ? '<p class="note">Padrões vencidos não aparecem na lista.</p>' : ''}
    <p class="note">Cada padrão corresponde a uma grandeza, com as suas próprias leituras e resultado no certificado.</p>
-   ${fld('lacre', 'Lacre do equipamento', o.lacre)}
-   ${[0, 1, 2].map(grupo).join('')}
+   <div class="two">${fld('lacre', 'Lacre do equipamento', o.lacre)}${sel('localCal', 'Local da calibração', ['Realizada no cliente', 'Realizada no laboratório'], o.localCal)}</div>
    <div class="two">${fld('tempAmb', 'Temperatura do local (°C)', o.tempAmb, 'number', 'step=any')}${fld('tempInc', '± incerteza (°C)', o.tempInc, 'number', 'step=any')}</div>
    <div class="two">${fld('umidAmb', 'Umidade relativa (%)', o.umidAmb, 'number', 'step=any')}${fld('umidInc', '± incerteza (%)', o.umidInc, 'number', 'step=any')}</div>
-   ${sel('localCal', 'Local da calibração', ['Realizada no cliente', 'Realizada no laboratório'], o.localCal)}
-   <p class="note">Valor médio = média das leituras. U automático = k · √(uA² + u padrão² + u resolução² + outras²), com uA = s/√n, u padrão = U do certificado ÷ k do certificado e u resolução = resolução/√12. Aceitação: |média − nominal| + U ≤ erro máximo admissível.</p>`);
+   ${[0, 1, 2].map(grupo).join('')}
+   <p class="note">Com uma única leitura por ponto, a repetitividade (uA) é zero. U automático = k · √(uA² + u padrão² + u resolução² + outras²), com u padrão = U do certificado ÷ k do certificado e u resolução = resolução/√12. Aceitação: |média − nominal| + U ≤ erro máximo admissível.</p>`);
 }
 function nPadSel(n) { [0, 1, 2].forEach(i => { $('#cg_' + i).style.display = i < +n ? '' : 'none'; }); }
 // ao escolher o padrão, sugere a unidade dele se o campo ainda estiver vazio
@@ -217,7 +216,7 @@ function parseCalib(d, c) {
       const p = c[`c${i}_rp_${j}`], txt = (c[`c${i}_re_${j}`] || '').trim(), u = c[`c${i}_ru_${j}`];
       if (p === '' || !txt) continue;
       const ev = parseNums(txt);
-      if (ev.some(isNaN)) { alert(`Leituras inválidas no ponto ${j + 1}${rot}. Separe por ; e use vírgula só como decimal.`); return false; }
+      if (ev.some(isNaN)) { alert(`Leitura inválida no ponto ${j + 1}${rot}. Informe só o número (vírgula ou ponto como decimal).`); return false; }
       const auto = uCalc(ev, { ...g, kfat: d.kfat });
       const manual = u !== '' && u != null;
       g.leituras.push({ p: +p, ev, e: mean(ev), uManual: manual, u: manual ? +u : auto.U, auto });
