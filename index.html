@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neotecnologia</title>
+<script>try{var t=localStorage.getItem("neo.theme");document.documentElement.dataset.theme=t||"light"}catch(e){document.documentElement.dataset.theme="light"}</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+<aside id="side">
+  <h1><img class="brand" src="assets/logo-neo.jpg" alt="Neo Tecnologia"><span>Neotecnologia</span></h1>
+  <nav id="nav" aria-label="Seções">
+    <button data-tab="dashboard" class="active">Painel</button>
+    <button data-tab="equip">Equipamentos</button>
+    <button data-tab="cat">Catálogo</button>
+    <button data-tab="os">Ordens de serviço</button>
+    <button data-tab="pad">Padrões</button>
+    <button data-tab="prev">Programação</button>
+    <button data-tab="ind">Indicadores</button>
+    <button data-tab="cli">Clientes</button>
+    <button data-tab="tec">Técnicos</button>
+    <button data-tab="chk">Checklists</button>
+  </nav>
+  <div class="tools">
+    <button onclick="editEmpresa()">Dados da empresa</button>
+    <button id="exportBtn">Exportar dados</button>
+    <button id="importBtn">Importar dados</button>
+    <button id="demoBtn">Dados de exemplo</button>
+    <button id="themeBtn" class="ghost" aria-label="Alternar modo claro e escuro" style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0"></button>
+    <input type="file" id="importFile" accept=".json" hidden>
+  </div>
+</aside>
+<div id="content">
+  <div id="alerts"></div>
+  <main id="view"></main>
+</div>
+</div>
+<div id="laudo"></div>
+<dialog id="dlg"><form method="dialog" id="form"></form></dialog>
+<script src="vendor/pdf.min.js"></script>
+<script src="forms.js"></script>
+<script src="docs.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
