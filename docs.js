@@ -8,7 +8,8 @@ const mesAno = d => `${MESES[+d.slice(5, 7) - 1]} / ${d.slice(0, 4)}`;
 const docLabel = o => o.tipo === 'Calibração' ? 'Certificado' : o.tipo === 'Qualificação térmica' ? 'Relatório' : o.tipo === 'Preventiva' ? 'Checklist' : 'Laudo';
 const docDia = o => (o.fechamento || o.abertura).slice(0, 10);
 
-const tecRegistro = n => { const t = db.tecnicos.find(x => norm(x.nome) === norm(n)); return t ? t.registro : (n === db.empresa.tecColetor ? db.empresa.tecCft : ''); };
+const tecDe = o => o.tecnico || (db.tecnicos[0] || {}).nome || '';
+const tecRegistro = n => { const t = db.tecnicos.find(x => norm(x.nome) === norm(n)); return t ? t.registro : ''; };
 function ensureCert(o, kind) {
   if (o.certNum) return o.certNum;
   const day = docDia(o).replace(/-/g, '');
@@ -72,19 +73,39 @@ function printLaudo(id) {
 }
 
 // ---------- laudo genérico (corretiva e demais) ----------
+// aprovação e necessidade de corretiva (calibração e qualificação térmica)
+const encLinha = o => o.encerr && (o.encerr.aprov || o.encerr.corr) ? `<p style="font-size:11pt;margin:0 0 8pt"><b>Equipamento aprovado:</b> ${esc(o.encerr.aprov) || '-'} &nbsp;&nbsp;&nbsp; <b>Necessita de corretiva:</b> ${esc(o.encerr.corr) || '-'}</p>` : '';
+// perguntas de encerramento da corretiva
+function fechaHtml(o) {
+  const c = o.fecha; if (!c) return '';
+  const yn = (v, os) => v ? `<b class="yn ${v === 'Sim' ? 'y' : 'n'}">${v}${v === 'Sim' && os ? ' – OS ' + esc(os) : ''}</b>` : '<b class="yn">-</b>';
+  return `<h4 class="sec">Encerramento da corretiva</h4><div class="qas">
+   <div class="qa"><span>Equipamento apto para uso?</span>${yn(c.apto)}</div>
+   <div class="qa"><span>Necessita de calibração?</span>${yn(c.cal, c.calOS)}</div>
+   <div class="qa"><span>Necessita de qualificação térmica?</span>${yn(c.qual, c.qualOS)}</div>
+   <div class="qa"><span>Necessita ter validação no processo?</span>${yn(c.val)}</div></div>`;
+}
 function printGenerico(o, e) {
   const dt = v => v ? new Date(v).toLocaleString('pt-BR') : '-';
-  const h = hours(o);
-  const row = (k, v) => `<tr><th>${k}</th><td>${esc(v) || '-'}</td></tr>`;
-  docShell(`<h2>Laudo técnico de serviço</h2><p>${esc(o.numero)} · emitido em ${fmtD(today())}</p>
-  <table>
-   ${row('Cliente', clienteNome(e))}${row('Equipamento', e.nome)}${row('Patrimônio / tag', e.tag)}${row('Fabricante / modelo', `${e.fabricante || ''} ${e.modelo || ''}`.trim())}
-   ${row('Nº de série', e.serie)}${row('Setor', e.setor)}${row('Tipo de serviço', o.tipo)}${row('Prioridade', o.prioridade)}
-   ${row('Descrição do problema / serviço', o.descricao)}${row('Abertura', dt(o.abertura))}${row('Fechamento', dt(o.fechamento))}
-   ${row('Tempo de reparo', h == null ? '-' : f1(h, ' h'))}${row('Causa / solução aplicada', o.solucao)}${row('Técnico responsável', o.tecnico || db.empresa.tecColetor)}
-   ${row('Custo', brl(o.custo))}${row('Status', o.status)}
-  </table>
-  <div class="sig"><div>${tecAssinatura(o.tecnico || db.empresa.tecColetor)}Técnico responsável</div><div>Ciente - Cliente</div></div>`);
+  const h = hours(o), emp = db.empresa, cli = clienteDe(e);
+  const kv = (k, v) => `<div class="kv"><small>${k}</small><b>${esc(v) || '-'}</b></div>`;
+  const stc = o.status === 'Concluída' ? 'ok' : o.status === 'Em andamento' ? 'wa' : 'ab';
+  docShell(`<div class="mod">
+  <div class="mtop"><div><div class="tt">Laudo técnico de serviço</div><div class="sb">Emitido em ${fmtD(today())}</div></div>
+   <div class="osb"><small>OS nº</small><b>${esc(o.numero)}</b></div></div>
+  <div class="chips"><span class="chip">${esc(o.tipo)}</span><span class="chip ${stc}">${esc(o.status)}</span><span class="chip">Prioridade ${esc(o.prioridade)}</span></div>
+  ${o.origemNum ? `<p class="orig">Corretiva aberta devido à preventiva <b>${esc(o.origemNum)}</b>, que identificou o problema.</p>` : ''}
+  <h4 class="sec">Cliente e equipamento</h4>
+  <div class="kvg">${kv('Cliente', clienteNome(e))}${kv('Setor', e.setor)}${kv('Equipamento', e.nome)}${kv('Patrimônio / tag', e.tag)}${kv('Fabricante / modelo', `${e.fabricante || ''} ${e.modelo || ''}`.trim())}${kv('Nº de série', e.serie)}</div>
+  <h4 class="sec">Serviço</h4>
+  <div class="box"><small>Descrição do problema / serviço</small><div class="tx">${esc(o.descricao) || '-'}</div></div>
+  <div class="box"><small>Causa / solução aplicada</small><div class="tx">${esc(o.solucao) || '-'}</div></div>
+  <h4 class="sec">Tempos e custo</h4>
+  <div class="kvg k4">${kv('Abertura', dt(o.abertura))}${kv('Fechamento', dt(o.fechamento))}${kv('Tempo de reparo', h == null ? '-' : f1(h, ' h'))}${kv('Custo', brl(o.custo))}</div>
+  ${fechaHtml(o)}
+  <div class="sigs2"><div><div class="im">${tecAssinatura(tecDe(o))}</div><div class="ln">Técnico responsável<br><b>${esc(tecDe(o))}</b>${tecRegistro(tecDe(o)) ? '<br>' + esc(tecRegistro(tecDe(o))) : ''}</div></div>
+   <div><div class="im"></div><div class="ln">Ciente - Cliente<br><b>${esc(cli.nome || clienteNome(e))}</b></div></div></div>
+  </div>`);
 }
 
 // ---------- relatório de calibração (modelo: Calibração termômetro) ----------
@@ -107,7 +128,7 @@ function printCert(o, e) {
    ${pts.map(r => `<tr><td>${fmtNum(r.p)}</td><td>${fmtNum(r.e)}</td><td>${fmtNum(r.corr)}</td><td>${fmtNum(k)}</td><td>${r.u == null ? '-' : fmtNum(r.u)}</td></tr>`).join('')}</table>
   <h4>Aceitação</h4><p>Erro Máximo: ${ema == null ? '-' : fmtNum(ema) + ' ' + esc(u)}<br>Correção + Incerteza Expandida ≤ Erro Máximo<br>Resultado: <b>${res}</b></p>`;
   };
-  const tec = o.tecnico || emp.tecColetor;
+  const tec = tecDe(o);
   const amb = [o.tempAmb !== '' && o.tempAmb != null ? `Temperatura do laboratório: ${comInc(o.tempAmb, o.tempInc, 'ºC')}` : '',
     o.umidAmb !== '' && o.umidAmb != null ? `Umidade Relativa do Ar: ${fmtNum(o.umidAmb, 0)}%ur${o.umidInc !== '' && o.umidInc != null ? ` (± ${fmtNum(o.umidInc, 0)}%)` : ''}` : ''].filter(Boolean).join(' &nbsp; ');
   const logo = LOGO;
@@ -132,12 +153,17 @@ function printCert(o, e) {
   <table class="sg"><tr><td colspan="2">Responsável Técnico – ${esc(emp.respTec)}</td></tr>
    <tr><td>Eng. Resp. ${esc(emp.engResp)}</td><td>${esc(emp.engCrea)}</td></tr>
    <tr><td colspan="2">Técnico Coletor de dados: ${esc(tec)}${tecRegistro(tec) ? ' – ' + esc(tecRegistro(tec)) : ''}</td></tr></table>
-  ${sigImgs()}${tecAssinatura(tec)}`;
+  ${encLinha(o)}
+  <div class="cs"><div><div class="im">${sigImgs()}${tecAssinatura(tec)}</div><div class="ln">Responsável Técnico<br><b>${esc(emp.respTec)}</b></div></div>
+   <div><div class="im"></div><div class="ln">Cliente - Ciente<br><b>${esc(cli.nome)}</b></div></div></div>`;
   // até 2 grandezas por folha; a 3ª vai para uma folha de continuação, que leva também as notas e assinaturas
   const tit = c => `<h3 class="t c">RESULTADOS DA CALIBRAÇÃO${c ? ' (continuação)' : ''}</h3>`;
+  // 1 grandeza: tudo na folha 2. 2 grandezas: as duas na folha 2 e notas/assinaturas na folha 3. 3: a terceira vai com as notas.
   const paginas = gs.length > 2
     ? [pg(tit(0) + gs.slice(0, 2).map(bloco).join('')), pg(tit(1) + gs.slice(2).map(bloco).join('') + fim)]
-    : [pg(tit(0) + gs.map(bloco).join('') + fim)];
+    : gs.length === 2
+      ? [pg(tit(0) + gs.map(bloco).join('')), pg(tit(1) + fim)]
+      : [pg(tit(0) + gs.map(bloco).join('') + fim)];
   $('#laudo').innerHTML = `<div class="certdoc">${pg(p1)}${paginas.join('')}</div>`;
   const imgs = [...document.querySelectorAll('#laudo img')];
   Promise.all(imgs.map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => doPrint());
@@ -147,30 +173,28 @@ function printCert(o, e) {
 function printChecklist(o, e) {
   const emp = db.empresa, cli = clienteDe(e), c = o.chk;
   const dia = docDia(o), prox = addDays(dia, +e.perPrev || 180);
-  const mark = r => r === 'C' ? '■C &nbsp; □NC' : '□C &nbsp; ■NC';
-  const rows = [];
-  for (let i = 0; i < c.itens.length; i += 2) {
-    const a = c.itens[i], b = c.itens[i + 1];
-    rows.push(`<tr><td>${esc(a.t)}</td><td class="m">${mark(a.r)}</td><td>${b ? esc(b.t) : ''}</td><td class="m">${b ? mark(b.r) : ''}</td></tr>`);
-  }
+  const ops = r => `<span class="ops"><i class="op ${r === 'C' ? 'ok' : ''}">C</i><i class="op ${r === 'NC' ? 'nc' : ''}">NC</i></span>`;
+  const kv = (k, v) => `<div class="kv"><small>${k}</small><b>${esc(v) || '-'}</b></div>`;
+  const itens = c.itens.map(a => `<div class="it ${a.r === 'NC' ? 'bad' : ''}"><span class="tx">${esc(a.t)}</span>${ops(a.r)}</div>`).join('');
   const ins = c.instrumentos.length ? c.instrumentos : ['-'];
-  const insRows = []; for (let i = 0; i < ins.length; i += 3) insRows.push(`<tr>${[0, 1, 2].map(j => `<td>${esc(ins[i + j] || '')}</td>`).join('')}</tr>`);
-  const equipTitulo = `${c.nome.toUpperCase()}${e.fabricante ? ' – MARCA ' + e.fabricante.toUpperCase() : ''}`;
-  docShell(`<div class="chk">
-  <div class="top"><div><b class="rz">${esc(emp.razao)}</b><br><b>CNPJ: ${esc(emp.cnpj)}</b></div><div class="r"><b class="os">OS nº: ${esc(o.numero)}</b><br><b>Página 1 / 1</b></div></div>
-  <h4 class="red">Checklist – Manutenção Preventiva – ${esc(c.nome)}</h4>
-  <table class="b"><tr><td rowspan="3" class="cli"><b>Cliente:</b><br><div style="text-align:center"><b>${esc(clienteNome(e))}</b></div></td><td colspan="2"><b>Setor: ${esc(e.setor)}</b></td></tr>
-   <tr><td><b>Cidade: ${esc(cli.cidade)}</b></td><td><b>Estado: ${esc(cli.uf)}</b></td></tr>
-   <tr><td colspan="2"><b>Técnico: ${esc(o.tecnico || emp.tecColetor)}</b></td></tr>
-   <tr><td><b>Revisão em: ${mesAno(dia)}</b></td><td colspan="2"><b>Próxima revisão em: ${mesAno(prox)}</b></td></tr></table>
-  <p class="leg"><b>Legenda: C - Conforme &nbsp;&nbsp;&nbsp; NC – Não conforme</b></p>
-  <table class="b"><tr><th colspan="4" class="cn">${esc(equipTitulo)}</th></tr>
-   <tr><td colspan="2"><b>Modelo: ${esc(e.modelo)}</b></td><td colspan="2"><b>Número de série: ${esc(e.serie)} – Patrimônio: ${esc(e.tag)}</b></td></tr>
-   ${rows.join('')}
-   <tr><th colspan="4" class="cn">Instrumentos Utilizados</th></tr>${insRows.join('')}
-   <tr><th colspan="4">OBS:</th></tr><tr><td colspan="4" style="height:32mm;vertical-align:top">${esc(o.solucao)}</td></tr>
-   <tr><td colspan="4"><b>Técnico Responsável:</b> ${esc(o.tecnico || emp.tecColetor)}${tecAssinatura(o.tecnico || emp.tecColetor)} &nbsp;&nbsp;&nbsp; <b>Ass. Cliente:</b> ____________________________</td></tr></table>
-  </div>`, 'plain');
+  const ncs = c.itens.filter(i => i.r === 'NC').map(i => { const k = i.osId && db.os.find(x => x.id === i.osId); return `<div class="nc"><b>NC – ${esc(i.t)}:</b> ${esc(i.j || '')}${k ? ' <em>(OS corretiva ' + esc(k.numero) + ')</em>' : ''}</div>`; }).join('');
+  const equipTitulo = `${e.nome || c.nome}${e.fabricante ? ' – marca ' + e.fabricante : ''}`;
+  docShell(`<div class="mod">
+  <div class="mtop"><div><div class="tt">Checklist – Manutenção Preventiva</div><div class="sb">${esc(c.nome)}</div></div>
+   <div class="osb"><small>OS nº</small><b>${esc(o.numero)}</b><span>Página 1 / 1</span></div></div>
+  <div class="kvg k3">${kv('Cliente', clienteNome(e))}${kv('Setor', e.setor)}${kv('Técnico', tecDe(o))}${kv('Cidade', cli.cidade)}${kv('Estado', cli.uf)}${kv('Revisão em', mesAno(dia))}</div>
+  <div class="prox">Próxima revisão em <b>${mesAno(prox)}</b></div>
+  <h4 class="sec">${esc(equipTitulo)}</h4>
+  <div class="kvg">${kv('Modelo', e.modelo)}${kv('Nº de série / patrimônio', `${e.serie || '-'} / ${e.tag || '-'}`)}</div>
+  <div class="leg"><span class="op ok">C</span> Conforme <span class="op nc">NC</span> Não conforme</div>
+  <div class="itens">${itens}</div>
+  <h4 class="sec">Instrumentos utilizados</h4>
+  <div class="chips">${ins.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>
+  <h4 class="sec">Observações</h4>
+  <div class="box obs"><div class="tx">${esc(o.solucao)}</div>${ncs}</div>
+  <div class="sigs2"><div><div class="im">${tecAssinatura(tecDe(o))}</div><div class="ln">Técnico responsável<br><b>${esc(tecDe(o))}</b></div></div>
+   <div><div class="im"></div><div class="ln">Ciente - Cliente<br><b>${esc(cli.nome || clienteNome(e))}</b></div></div></div>
+  </div>`);
 }
 
 // ---------- qualificação térmica (modelo: BOLSAS 0014) ----------
@@ -210,18 +234,35 @@ function qualStats(q, ser) {
   const ei = f(q.ei, '00'), ef = f(q.ef, '59'), pi = f(q.pi, '00'), pf = f(q.pf, '59');
   const lo = q.min === '' || q.min == null ? null : +q.min, hi = q.max === '' || q.max == null ? null : +q.max;
   const inEval = t => (!ei || t >= ei) && (!ef || t <= ef) && !(pi && pf && t >= pi && t <= pf);
+  // tolerância: tempo máximo (min) que o sensor pode ficar fora da faixa, de forma contínua, sem reprovar
+  const tol = +q.tol > 0 ? +q.tol : 0;
+  const ms = r => Date.parse(r.t.replace(' ', 'T'));
+  const dts = ser.rows.slice(1).map((r, i) => (ms(r) - ms(ser.rows[i])) / 1000).filter(x => x > 0).sort((a, b) => a - b);
+  const intSeg = dts.length ? dts[Math.floor(dts.length / 2)] : 60; // intervalo entre leituras (s)
   const sens = ser.cods.map((cod, j) => {
-    const vals = ser.rows.filter(r => inEval(r.t) && r.v[j] != null).map(r => r.v[j]);
+    const rows = ser.rows.filter(r => inEval(r.t) && r.v[j] != null);
+    const vals = rows.map(r => r.v[j]);
     if (!vals.length) return { cod, n: 0, ok: null };
     const mn = Math.min(...vals), mx = Math.max(...vals);
-    return { cod, n: vals.length, mn, mx, med: mean(vals), ok: (lo == null || mn >= lo) && (hi == null || mx <= hi) };
+    // maior período contínuo fora da faixa: cada leitura vale um intervalo; a corrida quebra se houver lacuna (ex.: abertura de porta)
+    let maxExc = 0, run = null, prevOut = false, prevT = null;
+    rows.forEach(r => {
+      const v = r.v[j], t = ms(r), out = (lo != null && v < lo) || (hi != null && v > hi);
+      if (out) {
+        run = prevOut && t - prevT <= 1.5 * intSeg * 1000 ? { ini: run.ini, fim: t } : { ini: t, fim: t };
+        maxExc = Math.max(maxExc, (run.fim - run.ini) / 60000 + intSeg / 60);
+      }
+      prevOut = out; prevT = t;
+    });
+    const dentro = (lo == null || mn >= lo) && (hi == null || mx <= hi);
+    return { cod, n: vals.length, mn, mx, med: mean(vals), maxExc, ok: dentro || (tol > 0 && maxExc <= tol + 1e-6) };
   });
   const used = sens.filter(s => s.n);
   let unif = 0;
   ser.rows.filter(r => inEval(r.t)).forEach(r => { const v = r.v.filter(x => x != null); if (v.length > 1) unif = Math.max(unif, Math.max(...v) - Math.min(...v)); });
   const res = !used.length ? 'Sem dados no período de avaliação' : lo == null && hi == null ? 'Sem critério de aceitação definido' : used.every(s => s.ok) ? 'APROVADO' : 'REPROVADO';
   return {
-    sens, lo, hi, res, unif, ei, ef, pi, pf,
+    sens, lo, hi, tol, res, unif, ei, ef, pi, pf,
     gmin: used.length ? Math.min(...used.map(s => s.mn)) : null, gmax: used.length ? Math.max(...used.map(s => s.mx)) : null,
     gmed: used.length ? mean(used.map(s => s.med)) : null, estab: used.length ? Math.max(...used.map(s => s.mx - s.mn)) : null,
     // ponto mais quente = sensor com a MAIOR máxima; ponto mais frio = sensor com a MENOR mínima (no período avaliado)
@@ -347,6 +388,7 @@ function printQual(o, e, ser) {
   <h4 class="qs">• Critério de Aceitação</h4>
   <p class="tx">A temperatura máxima durante todo o período de avaliação deve ser menor ou igual ao limite superior de temperatura: ${st.hi == null ? '-' : fmtNum(st.hi, 1) + ' ' + esc(un)}.</p>
   <p class="tx">A temperatura mínima durante todo o período de avaliação deve ser maior ou igual ao limite inferior de temperatura: ${st.lo == null ? '-' : fmtNum(st.lo, 1) + ' ' + esc(un)}.</p>
+  ${st.tol ? `<p class="tx">Admite-se que a temperatura permaneça fora desses limites por até ${fmtNum(st.tol, 0)} minutos consecutivos, em cada sensor; acima desse tempo, o equipamento é considerado reprovado.</p>` : ''}
   ${st.pi && st.pf ? `<p class="tx">O intervalo de abertura de porta (${esc(st.pi.slice(0, 16))} a ${esc(st.pf.slice(0, 16))}) não entra na avaliação.</p>` : ''}
   <h4 class="qs">• POSICIONAMENTO DOS SENSORES</h4>
   <p class="tx">Os sensores foram posicionados e distribuídos de forma diagonal do equipamento, garantindo assim, a uniformidade de temperatura por todo o equipamento.${q.esquema ? ' A distribuição dos sensores pode ser verificada na figura a seguir.' : ''}${q.ctrl ? ` O sensor ${esc(q.ctrl)} foi posicionado em paralelo ao sensor do equipamento (controlador).` : ''}</p>
@@ -355,12 +397,13 @@ function printQual(o, e, ser) {
   <div class="pb"></div>
   ${H(9, `RESULTADOS DOS ESTUDOS DE QUALIFICAÇÃO - ${q.carga === 'Sem carga' ? 'SEM CARGA' : 'COM CARGA'}`)}
   ${chartSVG(ser, st, q, un)}
-  <table class="b c"><tr><th>Sensor</th><th>Leituras avaliadas</th><th>Mínimo</th><th>Máximo</th><th>Média</th><th>Dentro do critério</th></tr>
-   ${st.sens.map(s => `<tr><td>${esc(s.cod)}</td><td>${s.n}</td><td>${s.n ? fmtNum(s.mn, 1) : '-'}</td><td>${s.n ? fmtNum(s.mx, 1) : '-'}</td><td>${s.n ? fmtNum(s.med, 2) : '-'}</td><td>${s.ok == null ? '-' : s.ok ? 'Sim' : '<b>NÃO</b>'}</td></tr>`).join('')}</table>
+  <table class="b c"><tr><th>Sensor</th><th>Leituras avaliadas</th><th>Mínimo</th><th>Máximo</th><th>Média</th><th>Dentro do critério</th>${st.tol ? '<th>Maior tempo fora da faixa</th>' : ''}</tr>
+   ${st.sens.map(s => `<tr><td>${esc(s.cod)}</td><td>${s.n}</td><td>${s.n ? fmtNum(s.mn, 1) : '-'}</td><td>${s.n ? fmtNum(s.mx, 1) : '-'}</td><td>${s.n ? fmtNum(s.med, 2) : '-'}</td><td>${s.ok == null ? '-' : s.ok ? 'Sim' : '<b>NÃO</b>'}</td>${st.tol ? `<td>${s.n ? fmtNum(s.maxExc, 0) + ' min' : '-'}</td>` : ''}</tr>`).join('')}</table>
   <p class="tx">Mínimo / máximo / média geral: ${fmtNum(st.gmin, 1)} / ${fmtNum(st.gmax, 1)} / ${fmtNum(st.gmed, 2)} ${esc(un)} &nbsp;·&nbsp; Uniformidade (maior diferença entre sensores no mesmo instante): ${fmtNum(st.unif, 1)} ${esc(un)} &nbsp;·&nbsp; Estabilidade (maior variação em um sensor): ${fmtNum(st.estab, 1)} ${esc(un)}${st.hot ? ` &nbsp;·&nbsp; Ponto mais quente: ${esc(st.hot.cod)} (${fmtNum(st.hot.mx, 1)} ${esc(un)}); mais frio: ${esc(st.cold.cod)} (${fmtNum(st.cold.mn, 1)} ${esc(un)})` : ''}</p>
   ${H(10, 'ASSINATURAS E APROVAÇÃO')}
   <p class="res">${st.res === 'APROVADO' ? 'Aprovado ( X ) &nbsp; <span class="rr">Reprovado (&nbsp;&nbsp;)</span>' : st.res === 'REPROVADO' ? 'Aprovado (&nbsp;&nbsp;) &nbsp; <span class="rr">Reprovado ( X )</span>' : esc(st.res)}</p>
-  <div class="sigs"><div>${tecAssinatura(o.tecnico || emp.tecColetor)}<div class="ln">Técnico que executou o serviço</div><b>${esc(o.tecnico || emp.tecColetor)}</b><br>${esc(tecRegistro(o.tecnico || emp.tecColetor))}</div>
+  ${encLinha(o)}
+  <div class="sigs"><div>${tecAssinatura(tecDe(o))}<div class="ln">Técnico que executou o serviço</div><b>${esc(tecDe(o))}</b><br>${esc(tecRegistro(tecDe(o)))}</div>
    <div><div class="ln">Cliente</div><b>${esc(cli.nome)}</b><br>Nome legível / assinatura</div></div>
   <div class="pb"></div>
   <table class="b data"><thead><tr><th>Tempo</th>${ser.cods.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>

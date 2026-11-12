@@ -530,6 +530,7 @@ function editOS(id, preset = {}) {
   const o = db.os.find(x => x.id === id) || { tipo: 'Corretiva', prioridade: 'Normal', status: 'Aberta', abertura: nowLocal(), ...preset };
   openForm(id ? `OS ${esc(o.numero)}` : 'Nova ordem de serviço', `
     ${sel('clienteOS', 'Cliente', [['', '- selecione o cliente -'], ...db.clientes.map(c => [c.id, c.nome])], (equipById(o.equipId) || {}).clienteId || '', 'required onchange="osCli(this.value)"')}
+    ${o.origemNum ? `<p class="note">Corretiva aberta pela preventiva <b>${esc(o.origemNum)}</b>.</p>` : ''}
     <label>Equipamento <b class="req"> *</b><select name="equipId" required></select></label>
     <div class="two">${sel('tipo', 'Tipo', ['Corretiva', 'Preventiva', 'Calibração', 'Qualificação térmica'], o.tipo)}${sel('prioridade', 'Prioridade', ['Normal', 'Alta', 'Urgente'], o.prioridade)}</div>
     <label>Descrição do problema / serviço<textarea name="descricao" rows="2" required>${esc(o.descricao)}</textarea></label>
@@ -537,14 +538,16 @@ function editOS(id, preset = {}) {
     <div class="two">${sel('status', 'Status', ['Aberta', 'Em andamento', 'Concluída'], o.status, 'onchange="osSync(true)"')}${sel('tecnico', 'Técnico responsável', [['', '- selecione -'], ...uniq([...db.tecnicos.map(t => t.nome), o.tecnico])], o.tecnico || '', 'required')}</div>
     <label>Causa / solução aplicada (nos certificados: observações / notas técnicas)<textarea name="solucao" rows="2">${esc(o.solucao)}</textarea></label>
     <div class="two">${fld('custo', 'Custo (R$)', o.custo, 'number', 'min=0 step=0.01')}</div>
-    ${chkBlock(o)}${calibBlock(o)}${qualBlock(o)}`,
+    ${chkBlock(o)}${calibBlock(o)}${qualBlock(o)}${corrBlock(o)}${encBlock(o)}`,
     d => {
       delete d.clienteOS;
       if (d.status !== 'Concluída') d.fechamento = '';
       else if (!d.fechamento) { alert('Informe a data de fechamento para concluir a OS.'); return false; }
       if (d.fechamento && new Date(d.fechamento) < new Date(d.abertura)) { alert('O fechamento não pode ser anterior à abertura.'); return false; }
       if (!parseOSExtras(d, id ? o : null)) return false;
-      if (id) Object.assign(o, d); else { db.seq++; db.os.push({ id: uid(), numero: 'OS-' + String(db.seq).padStart(4, '0'), ...d }); }
+      let os = o;
+      if (id) Object.assign(o, d); else { db.seq++; os = { id: uid(), numero: 'OS-' + String(db.seq).padStart(4, '0'), ...d }; db.os.push(os); }
+      const novas = abrirCorretivas(os);
       const eq = equipById(d.equipId);
       if (eq) {
         if (d.status === 'Concluída') {
@@ -557,10 +560,26 @@ function editOS(id, preset = {}) {
         if (eq.status !== 'Inativo') eq.status = aberta ? 'Em manutenção' : 'Operacional';
       }
       save();
+      if (novas.length) alert(`Item não conforme: ${novas.length > 1 ? 'foram abertas as OS corretivas' : 'foi aberta a OS corretiva'} ${novas.join(', ')}, vinculada${novas.length > 1 ? 's' : ''} à preventiva ${os.numero}.`);
     });
   osCli(document.querySelector('#form [name=clienteOS]').value, o.equipId);
   osSync(false);
   form.elements.abertura.addEventListener('input', () => osSync(false));
+}
+// cada item NC da preventiva gera uma OS corretiva vinculada (uma só por item; ao editar, só atualiza o texto)
+function abrirCorretivas(p) {
+  const novas = [];
+  if (p.tipo !== 'Preventiva' || !p.chk) return novas;
+  p.chk.itens.forEach(it => {
+    if (it.r !== 'NC') return;
+    const txt = `Aberta devido à preventiva ${p.numero}, que identificou o problema. Item não conforme: ${it.t}. Problema encontrado: ${it.j}`;
+    const ex = it.osId && db.os.find(x => x.id === it.osId);
+    if (ex) { if (ex.status !== 'Concluída') ex.descricao = txt; return; }
+    db.seq++;
+    const n = { id: uid(), numero: 'OS-' + String(db.seq).padStart(4, '0'), tipo: 'Corretiva', prioridade: 'Normal', status: 'Aberta', abertura: nowLocal(), fechamento: '', equipId: p.equipId, descricao: txt, tecnico: p.tecnico, solucao: '', custo: '', chk: null, qual: null, leituras: [], padraoIds: [], cals: [], padraoId: '', origemId: p.id, origemNum: p.numero };
+    db.os.push(n); it.osId = n.id; novas.push(n.numero);
+  });
+  return novas;
 }
 function osSync(fromChange) {
   const st = form.elements.status.value, fec = form.elements.fechamento, on = st === 'Concluída';
@@ -575,8 +594,37 @@ function genOS(equipId, k) {
   editOS(null, { equipId, tipo: KIND[k].tipo, descricao: KIND[k].desc });
 }
 
+// ---------- menu (barra lateral no computador; barra inferior + "Mais" no celular) ----------
+const ICON = {
+  dashboard: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
+  ind: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  os: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
+  prev: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM3 10h18M8 3v4M16 3v4',
+  chk: 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
+  equip: 'M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 21h8M12 17v4',
+  cli: 'M3 21V8l7-4v17M10 21h11V11l-6-3M7 10v.01M7 14v.01M14 14v.01M14 18v.01',
+  tec: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6',
+  pad: 'M12 3v4M7 7h10l1 14H6zM9 12h6',
+  cat: 'M4 5h16M4 12h16M4 19h16'
+};
+const svgI = k => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[k]}"/></svg>`;
+const MENU = [
+  { g: 'Visão geral', it: [['dashboard', 'Painel'], ['ind', 'Indicadores']] },
+  { g: 'Serviços', it: [['os', 'Ordens de serviço'], ['prev', 'Programação'], ['pad', 'Padrões'], ['chk', 'Checklists']] },
+  { g: 'Cadastros', it: [['equip', 'Equipamentos'], ['cli', 'Clientes'], ['tec', 'Técnicos'], ['cat', 'Catálogo']] }
+];
+const MENU_FIXO = ['dashboard', 'equip', 'os', 'prev']; // atalhos da barra inferior no celular; o resto vai para "Mais"
+const rotuloCurto = { equip: 'Equipam.', prev: 'Agenda', os: 'OS' };
+(function montarMenu() {
+  $('#nav').innerHTML = MENU.map(m => `<div class="ng">${m.g}</div>` + m.it.map(([k, l]) => `<button data-tab="${k}">${svgI(k)}<span>${l}</span></button>`).join('')).join('');
+  const todos = MENU.flatMap(m => m.it);
+  $('#more .mgrid').innerHTML = todos.filter(([k]) => !MENU_FIXO.includes(k)).map(([k, l]) => `<button data-tab="${k}">${svgI(k)}${l}</button>`).join('');
+  $('#bnav').innerHTML = MENU_FIXO.map(k => `<button data-tab="${k}">${svgI(k)}<span>${rotuloCurto[k] || todos.find(t => t[0] === k)[1]}</span></button>`).join('')
+    + '<button id="moreBtn" aria-expanded="false" aria-controls="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg><span>Mais</span></button>';
+})();
+
 // ---------- topo ----------
-$('#nav').onclick = e => { if (e.target.dataset.tab) { tab = e.target.dataset.tab; render(); } };
+$('#nav').onclick = e => { const b = e.target.closest('button[data-tab]'); if (b) { tab = b.dataset.tab; render(); scrollTo(0, 0); } };
 // menu do celular (barra inferior + painel "Mais")
 function closeMore() { $('#more').hidden = true; $('#moreBg').hidden = true; $('#moreBtn').setAttribute('aria-expanded', 'false'); }
 $('#moreBtn').onclick = () => { const abrir = $('#more').hidden; closeMore(); if (abrir) { $('#more').hidden = false; $('#moreBg').hidden = false; $('#moreBtn').setAttribute('aria-expanded', 'true'); } };
@@ -627,7 +675,7 @@ $('#demoBtn').onclick = () => {
   ], equip: [
     e('EQ-001', 'Monitor multiparâmetro', 'Philips', 'MX450', 'UTI', 'Alta', 180, 365, 200),
     e('EQ-002', 'Ventilador pulmonar', 'Dräger', 'Evita V300', 'UTI', 'Alta', 90, 180, 60),
-    e('EQ-003', 'Bomba de infusão', 'B. Braun', 'Infusomat', 'Enfermaria', 'Média', 180, 365, 100),
+    e('EQ-003', 'Balança pediátrica', 'Toledo', '2124PP', 'Enfermaria', 'Média', 180, 365, 100),
     e('EQ-004', 'Desfibrilador', 'Instramed', 'Cardiomax', 'Pronto-socorro', 'Alta', 90, 365, 120),
     e('EQ-005', 'Autoclave', 'Baumer', 'AB-75', 'CME', 'Alta', 120, 365, 30),
     e('EQ-006', 'Termômetro digital', 'Incoterm', 'TD-20', 'Laboratório', 'Média', 180, 365, 30),

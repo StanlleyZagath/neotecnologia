@@ -28,6 +28,7 @@ function loadImg(inp, key, max = 900) {
   r.readAsDataURL(f);
 }
 const imgField = (key, label, cur) => `<label>${label}<input type="file" accept="image/*" onchange="loadImg(this,'${key}')"><img id="pv_${key}" src="${cur || ''}" style="max-height:70px;margin-top:6px;display:${cur ? 'block' : 'none'}"></label>`;
+const rmChk = (name, cur) => cur ? `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="${name}" style="width:auto"> Remover a assinatura atual</label>` : '';
 const box = (id, legend, show, inner) => `<fieldset id="${id}" style="display:${show ? 'block' : 'none'};border:1px solid var(--line);border-radius:8px;margin:10px 0"><legend>${legend}</legend>${inner}</fieldset>`;
 
 // ---------- empresa ----------
@@ -41,12 +42,18 @@ function editEmpresa() {
     <div class="two">${fld('cep', 'CEP', e.cep)}${fld('email', 'E-mail', e.email)}</div>
     <div class="two">${fld('respTec', 'Responsável técnico', e.respTec)}${fld('respTecCargo', 'Cargo do responsável', e.respTecCargo)}</div>
     <div class="two">${fld('engResp', 'Engenheiro responsável', e.engResp)}${fld('engCrea', 'CREA do engenheiro', e.engCrea)}</div>
-    <div class="two">${fld('tecColetor', 'Técnico coletor de dados (padrão)', e.tecColetor)}${fld('tecCft', 'CFT do técnico', e.tecCft)}</div>
     <label>Texto do procedimento (calibração)<textarea name="procedimento" rows="3">${esc(e.procedimento)}</textarea></label>
     <label>Observação sobre incerteza (calibração)<textarea name="obsIncerteza" rows="3">${esc(e.obsIncerteza)}</textarea></label>
     <label>Normas citadas (qualificação térmica)<textarea name="normas" rows="2">${esc(e.normas)}</textarea></label>
-    ${imgField('assResp', 'Assinatura do responsável técnico (imagem)', e.assResp)}${imgField('assEng', 'Assinatura do engenheiro responsável (imagem)', e.assEng)}`,
-    d => { db.empresa = { ...db.empresa, ...d, ...tmpImgs }; save(); });
+    ${imgField('assResp', 'Assinatura do responsável técnico (imagem)', e.assResp)}${rmChk('rmAssResp', e.assResp)}
+    ${imgField('assEng', 'Assinatura do engenheiro responsável (imagem)', e.assEng)}${rmChk('rmAssEng', e.assEng)}
+    <p class="note">Técnicos e seus registros (CFT/CREA) ficam no menu Técnicos.</p>`,
+    d => {
+      const rmR = d.rmAssResp, rmE = d.rmAssEng; delete d.rmAssResp; delete d.rmAssEng;
+      db.empresa = { ...db.empresa, ...d, ...tmpImgs };
+      if (rmR) db.empresa.assResp = ''; if (rmE) db.empresa.assEng = '';
+      save();
+    });
 }
 
 // ---------- clientes ----------
@@ -96,6 +103,46 @@ function editChk(id) {
 }
 function delChk(id) { if (confirm('Excluir este modelo?')) { db.checklists = db.checklists.filter(c => c.id !== id); save(); } }
 
+// ---------- encerramento da corretiva ----------
+const simNao = (name, label, v) => `<div class="sn"><span>${label}</span><label><input type="radio" name="${name}" value="Sim" ${v === 'Sim' ? 'checked' : ''} style="width:auto"> Sim</label><label><input type="radio" name="${name}" value="Não" ${v === 'Não' ? 'checked' : ''} style="width:auto"> Não</label></div>`;
+function corrBlock(o) {
+  const c = o.fecha || {};
+  const lista = tipo => `<datalist id="dl_${tipo}">${db.os.filter(x => x.tipo === tipo).map(x => `<option value="${esc(x.numero)}">`).join('')}</datalist>`;
+  return box('corr', 'Encerramento da corretiva', o.tipo === 'Corretiva', `
+    ${simNao('fc_apto', 'Equipamento apto para uso?', c.apto)}
+    ${simNao('fc_cal', 'Necessita de calibração?', c.cal)}
+    <div id="fc_calBox" style="display:${c.cal === 'Sim' ? 'block' : 'none'}">${fld('fc_calOS', 'Número da OS de calibração', c.calOS, 'text', 'list="dl_Calibração" placeholder="ex.: OS-0012"')}${lista('Calibração')}</div>
+    ${simNao('fc_qual', 'Necessita de qualificação térmica?', c.qual)}
+    <div id="fc_qualBox" style="display:${c.qual === 'Sim' ? 'block' : 'none'}">${fld('fc_qualOS', 'Número da OS de qualificação térmica', c.qualOS, 'text', 'list="dl_Qualificação térmica" placeholder="ex.: OS-0013"')}${lista('Qualificação térmica')}</div>
+    ${simNao('fc_val', 'Necessita ter validação no processo?', c.val)}`);
+}
+function parseCorr(d, c) {
+  const f = { apto: c.fc_apto || '', cal: c.fc_cal || '', calOS: c.fc_cal === 'Sim' ? (c.fc_calOS || '').trim() : '', qual: c.fc_qual || '', qualOS: c.fc_qual === 'Sim' ? (c.fc_qualOS || '').trim() : '', val: c.fc_val || '' };
+  if (d.status === 'Concluída') {
+    const falta = [['apto', 'Equipamento apto para uso'], ['cal', 'Necessita de calibração'], ['qual', 'Necessita de qualificação térmica'], ['val', 'Necessita ter validação no processo']].find(([k]) => !f[k]);
+    if (falta) { alert('Para concluir a corretiva, responda no encerramento: ' + falta[1] + '? (Sim ou Não).'); return false; }
+  }
+  d.fecha = f;
+  return true;
+}
+
+// ---------- encerramento da calibração e da qualificação térmica ----------
+function encBlock(o) {
+  const c = o.encerr || {};
+  return box('enc', 'Encerramento', o.tipo === 'Calibração' || o.tipo === 'Qualificação térmica', `
+    ${simNao('fa_aprov', 'Equipamento aprovado?', c.aprov)}
+    ${simNao('fa_corr', 'Necessita de corretiva?', c.corr)}`);
+}
+function parseEnc(d, c) {
+  const f = { aprov: c.fa_aprov || '', corr: c.fa_corr || '' };
+  if (d.status === 'Concluída') {
+    const falta = [['aprov', 'Equipamento aprovado'], ['corr', 'Necessita de corretiva']].find(([k]) => !f[k]);
+    if (falta) { alert('Para concluir, responda no encerramento: ' + falta[1] + '? (Sim ou Não).'); return false; }
+  }
+  d.encerr = f;
+  return true;
+}
+
 // ---------- eventos do formulário da OS ----------
 document.addEventListener('change', ev => {
   const n = ev.target.name, v = ev.target.value;
@@ -103,17 +150,25 @@ document.addEventListener('change', ev => {
     $('#calib').style.display = v === 'Calibração' ? 'block' : 'none';
     $('#qual').style.display = v === 'Qualificação térmica' ? 'block' : 'none';
     $('#chk').style.display = v === 'Preventiva' ? 'block' : 'none';
+    if ($('#corr')) $('#corr').style.display = v === 'Corretiva' ? 'block' : 'none';
+    if ($('#enc')) $('#enc').style.display = v === 'Calibração' || v === 'Qualificação térmica' ? 'block' : 'none';
   }
+  if (n === 'fc_cal' || n === 'fc_qual') $('#' + n + 'Box').style.display = v === 'Sim' ? 'block' : 'none';
   if (n === 'chkModelo') $('#chkBody').innerHTML = chkBody(v, {});
-  if (n === 'equipId' && $('#chk')) {
-    const e = equipById(v);
-    if (e && e.checklistId) { form.chkModelo.value = e.checklistId; $('#chkBody').innerHTML = chkBody(e.checklistId, {}); }
+  if (/^ci_\d+$/.test(n || '')) { // NC: pede a justificativa do problema
+    const j = ev.target.closest('tr').querySelector('.cj');
+    if (j) { j.style.display = v === 'NC' ? 'block' : 'none'; j.required = v === 'NC'; if (v === 'NC') j.focus(); }
+  }
+  // o modelo de checklist acompanha o equipamento escolhido (sem modelo cadastrado no equipamento = sem checklist)
+  if ((n === 'equipId' || n === 'clienteOS') && $('#chk')) {
+    const e = n === 'equipId' ? equipById(v) : null, m = (e && e.checklistId) || '';
+    form.chkModelo.value = m; $('#chkBody').innerHTML = chkBody(m, {});
   }
 });
 
 // ---------- checklist da preventiva ----------
 function chkBlock(o) {
-  const eq = equipById(o.equipId) || db.equip[0] || {};
+  const eq = equipById(o.equipId) || {};
   const c = o.chk || {};
   const modeloId = c.modeloId || eq.checklistId || '';
   return box('chk', 'Checklist da preventiva', o.tipo === 'Preventiva', `
@@ -122,19 +177,21 @@ function chkBlock(o) {
 }
 function chkBody(modeloId, c) {
   const m = db.checklists.find(x => x.id === modeloId);
-  if (!m) return '<p class="note">Escolha um modelo (cadastre na aba Checklists).</p>';
+  if (!m) return '<p class="note">Este equipamento não tem modelo de checklist. Escolha um modelo acima ou defina um padrão no cadastro do equipamento (cadastre os modelos na aba Checklists).</p>';
   const saved = c && c.modeloId === modeloId ? c : null;
   const rad = (i, val, r) => `<label style="display:inline;margin-right:8px"><input type="radio" name="ci_${i}" value="${val}" ${r === val ? 'checked' : ''} style="width:auto"> ${val}</label>`;
   return `<table>${m.itens.map((t, i) => {
-    const r = saved && saved.itens[i] && saved.itens[i].t === t ? saved.itens[i].r : 'C';
-    return `<tr><td>${esc(t)}</td><td style="white-space:nowrap">${rad(i, 'C', r)}${rad(i, 'NC', r)}</td></tr>`;
+    const it = saved && saved.itens[i] && saved.itens[i].t === t ? saved.itens[i] : {}, r = it.r || 'C';
+    return `<tr><td>${esc(t)}<input name="cj_${i}" class="cj" placeholder="Justifique o problema encontrado (abre uma OS corretiva)" value="${esc(it.j || '')}" style="margin-top:6px;display:${r === 'NC' ? 'block' : 'none'}" ${r === 'NC' ? 'required' : ''}></td><td style="white-space:nowrap;vertical-align:top">${rad(i, 'C', r)}${rad(i, 'NC', r)}</td></tr>`;
   }).join('')}</table>
   <p class="note">Instrumentos utilizados:</p>
   ${m.instrumentos.map((t, j) => `<label style="display:inline-block;margin-right:12px"><input type="checkbox" name="ins_${j}" ${saved ? (saved.instrumentos.includes(t) ? 'checked' : '') : 'checked'} style="width:auto"> ${esc(t)}</label>`).join('')}`;
 }
-function parseChk(d, c) {
+function parseChk(d, c, prev) {
   const m = db.checklists.find(x => x.id === c.chkModelo);
-  d.chk = m ? { modeloId: m.id, nome: m.nome, itens: m.itens.map((t, i) => ({ t, r: c['ci_' + i] || 'C' })), instrumentos: m.instrumentos.filter((t, j) => c['ins_' + j] !== undefined) } : null;
+  const antes = prev && prev.chk && prev.chk.modeloId === c.chkModelo ? prev.chk.itens : [];
+  if (m) for (let i = 0; i < m.itens.length; i++) if ((c['ci_' + i] || 'C') === 'NC' && !(c['cj_' + i] || '').trim()) { alert(`Justifique o problema encontrado no item não conforme: ${m.itens[i]}`); return false; }
+  d.chk = m ? { modeloId: m.id, nome: m.nome, itens: m.itens.map((t, i) => { const r = c['ci_' + i] || 'C', a = antes.find(x => x.t === t) || {}; return { t, r, j: r === 'NC' ? (c['cj_' + i] || '').trim() : '', osId: a.osId || '' }; }), instrumentos: m.instrumentos.filter((t, j) => c['ins_' + j] !== undefined) } : null;
   return true;
 }
 
@@ -157,7 +214,13 @@ function uCalc(ev, d) {
 const readRow = (g, i, r) => `<tr><td>${i + 1}</td>
   <td><input name="c${g}_rp_${i}" type="number" step="any" value="${esc(r.p)}"></td>
   <td><input name="c${g}_re_${i}" inputmode="decimal" placeholder="ex.: 6,9" value="${esc((r.ev || (r.e != null ? [r.e] : [])).join('; ').replace(/\./g, ','))}"></td>
-  <td><input name="c${g}_ru_${i}" type="number" step="any" placeholder="automático" value="${esc((r.uManual ?? (r.u != null)) ? r.u : '')}"></td></tr>`;
+  <td><input name="c${g}_ru_${i}" type="number" step="any" placeholder="automático" value="${esc((r.uManual ?? (r.u != null)) ? r.u : '')}"></td>
+  <td><button type="button" class="sm danger" onclick="delReading(this,${g})" aria-label="Remover ponto">Remover</button></td></tr>`;
+// remove o ponto e renumera os demais (nomes c{g}_rp_/re_/ru_ precisam ser sequenciais)
+function delReading(btn, g) {
+  btn.closest('tr').remove();
+  [...$('#rd_' + g + ' tbody').rows].forEach((r, i) => { r.cells[0].textContent = i + 1; r.querySelectorAll('input').forEach(inp => { inp.name = inp.name.replace(/\d+$/, i); }); });
+}
 function addReading(g) { const tb = $('#rd_' + g + ' tbody'); tb.insertAdjacentHTML('beforeend', readRow(g, tb.rows.length, {})); }
 // grupos de calibração: um por padrão/grandeza (até 3). OS antigas guardam um grupo só, nos campos da própria OS.
 const calsDe = o => o && o.cals && o.cals.length ? o.cals : [{ padraoId: o && o.padraoId, grandeza: o && o.grandeza, unidade: o && o.unidade, resolucao: o && o.resolucao, faixaCol: o && o.faixaCol, ema: o && o.ema, uOutros: o && o.uOutros, leituras: (o && o.leituras) || [] }];
@@ -176,7 +239,7 @@ function calibBlock(o) {
    <div class="two">${fld(`c${i}_grandeza`, 'Grandeza (vazio = pelo tipo do padrão)', g.grandeza, 'text', `placeholder="${esc(GRANDEZA[pd.tipo] || '')}"`)}${fld(`c${i}_unidade`, 'Unidade das leituras', g.unidade || pd.unidade || (i ? '' : '°C'))}</div>
    <div class="two">${fld(`c${i}_resolucao`, 'Resolução do instrumento', g.resolucao)}${fld(`c${i}_faixaCol`, 'Faixa coletada (ex.: 2 à 8 °C)', g.faixaCol)}</div>
    <div class="two">${fld(`c${i}_ema`, 'Erro máximo admissível (±)', g.ema, 'number', 'step=any min=0')}${fld(`c${i}_uOutros`, 'Outras contribuições de incerteza (opcional)', g.uOutros, 'number', 'step=any min=0')}</div>
-   <table id="rd_${i}"><thead><tr><th>#</th><th>Valor nominal (padrão)</th><th>Leitura do equipamento</th><th>U (vazio = automático)</th></tr></thead><tbody>${rows.map((r, j) => readRow(i, j, r)).join('')}</tbody></table>
+   <table id="rd_${i}"><thead><tr><th>#</th><th>Valor nominal (padrão)</th><th>Leitura do equipamento</th><th>U (vazio = automático)</th><th></th></tr></thead><tbody>${rows.map((r, j) => readRow(i, j, r)).join('')}</tbody></table>
    <p><button type="button" class="sm ghost" onclick="addReading(${i})">Adicionar ponto</button></p></fieldset>`;
   };
   return box('calib', 'Calibração', o.tipo === 'Calibração', `
@@ -270,7 +333,8 @@ function qualBlock(o) {
    <div class="two">${fld('q_tamb', 'Temperatura ambiente (°C)', q.tamb, 'number', 'step=any')}${fld('q_pi', 'Abertura de porta: início', q.pi, 'datetime-local', 'step=1')}</div>
    <div class="two">${fld('q_pf', 'Abertura de porta: fim da recuperação', q.pf, 'datetime-local', 'step=1')}<span></span></div>
    <div class="two">${fld('q_ei', 'Avaliar a partir de (vazio = início)', q.ei, 'datetime-local', 'step=1')}${fld('q_ef', 'Avaliar até (vazio = fim)', q.ef, 'datetime-local', 'step=1')}</div>
-   <p class="note">O resultado considera só o período de avaliação e ignora o intervalo da abertura de porta. Tudo continua no gráfico e na tabela.</p>
+   <div class="two">${fld('q_tol', 'Tolerância fora da faixa (minutos seguidos)', q.tol != null ? q.tol : (o.qual ? '' : 6), 'number', 'step=any min=0')}<span></span></div>
+   <p class="note">Tolerância: o sensor pode ficar acima ou abaixo da faixa por até esse tempo, contínuo, e ainda assim ser aprovado; passou disso, reprova. Vazio ou 0 = qualquer leitura fora da faixa reprova. O resultado considera só o período de avaliação e ignora o intervalo da abertura de porta. Tudo continua no gráfico e na tabela.</p>
    ${imgField('foto', 'Foto do equipamento sob ensaio', q.foto)}${imgField('esquema', 'Figura da distribuição dos sensores', q.esquema)}
    <table id="qsens"><thead><tr><th>Código</th><th>Modelo</th><th>Nº de série</th><th>Posição</th><th></th></tr></thead><tbody>${sens.map((s, i) => sensRow(i, s)).join('')}</tbody></table>
    <p><button type="button" class="sm ghost" onclick="addSens()">Adicionar sensor</button></p>
@@ -392,13 +456,17 @@ function parseQual(d, c, prev) {
 // ---------- ponto de entrada usado pelo editOS ----------
 function parseOSExtras(d, prev) {
   const take = re => { const o = {}; for (const k of Object.keys(d)) if (re.test(k)) { o[k] = d[k]; delete d[k]; } return o; };
-  const chk = take(/^(ci_|ins_)\d+$|^chkModelo$/);
+  const chk = take(/^(ci_|cj_|ins_)\d+$|^chkModelo$/);
   const q = take(/^q_|^padraoQ$/);
   const cal = take(/^c[012]_|^nPad$/);
-  d.chk = null; d.qual = null; d.leituras = []; d.padraoIds = []; d.cals = [];
-  if (d.tipo === 'Preventiva') { d.padraoId = ''; return parseChk(d, chk); }
+  const fc = take(/^fc_/);
+  const fa = take(/^fa_/);
+  d.chk = null; d.qual = null; d.leituras = []; d.padraoIds = []; d.cals = []; d.fecha = null; d.encerr = null;
+  if ((d.tipo === 'Calibração' || d.tipo === 'Qualificação térmica') && !parseEnc(d, fa)) return false;
+  if (d.tipo === 'Preventiva') { d.padraoId = ''; return parseChk(d, chk, prev); }
   if (d.tipo === 'Qualificação térmica') return parseQual(d, q, prev);
   if (d.tipo === 'Calibração') return parseCalib(d, cal);
   d.padraoId = '';
+  if (d.tipo === 'Corretiva') return parseCorr(d, fc);
   return true;
 }
