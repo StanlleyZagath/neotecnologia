@@ -60,12 +60,12 @@ function editEmpresa() {
 function vCli() {
   const q = fv('cli', 'q').toLowerCase();
   const lista = db.clientes.filter(c => !q || [c.nome, c.doc, c.endereco, c.cidade, c.contato].join(' ').toLowerCase().includes(q));
-  return `<div class="bar"><h2>Clientes</h2><button onclick="editCli()">Novo cliente</button></div>
+  return `<div class="bar"><h2>Clientes</h2><span><button class="ghost" onclick="importarPedido()">Importar pedido (PDF)</button> <button class="ghost" onclick="importarCorretiva()">Importar OS corretiva (PDF)</button> <button onclick="editCli()">Novo cliente</button></span></div>
   ${fbar('cli', ftxt('cli', 'q', 'Nome, CNPJ, cidade, contato...'), lista.length, db.clientes.length)}
   <div class="wrap"><table><tr><th>Nome</th><th>CNPJ / CPF</th><th>Endereço</th><th>Contato</th><th></th></tr>
   ${lista.map(c => `<tr><td>${esc(c.nome)}</td><td>${esc(c.doc)}</td><td>${esc(c.endereco)}<br><span class="l">${esc(c.cidade)} ${esc(c.uf)} ${esc(c.cep)}</span></td><td>${esc(c.contato)}</td>
-   <td><button class="sm ghost" onclick="editCli('${c.id}')">Editar</button> <button class="sm danger" onclick="delCli('${c.id}')">Excluir</button></td></tr>`).join('')}
-  </table></div>${lista.length ? '' : '<div class="empty">' + (db.clientes.length ? 'Nenhum cliente com esse filtro.' : 'Nenhum cliente cadastrado.') + '</div>'}`;
+   <td><button class="sm ghost" onclick="importarPedido('${c.id}')">Importar pedido</button> <button class="sm ghost" onclick="importarCorretiva('${c.id}')">Importar corretiva</button> <button class="sm ghost" onclick="editCli('${c.id}')">Editar</button> <button class="sm danger" onclick="delCli('${c.id}')">Excluir</button></td></tr>`).join('')}
+  </table></div>${lista.length ? '' : '<div class="empty">' + (db.clientes.length ? 'Nenhum cliente com esse filtro.' : 'Nenhum cliente cadastrado.') + '</div>'}${pedidosHtml()}`;
 }
 function editCli(id) {
   const c = db.clientes.find(x => x.id === id) || {};
@@ -131,10 +131,24 @@ function encBlock(o) {
   const c = o.encerr || {};
   return box('enc', 'Encerramento', o.tipo === 'Calibração' || o.tipo === 'Qualificação térmica', `
     ${simNao('fa_aprov', 'Equipamento aprovado?', c.aprov)}
-    ${simNao('fa_corr', 'Necessita de corretiva?', c.corr)}`);
+    <label id="fa_jAbox" style="display:none">Justificativa: por que o equipamento não foi aprovado<textarea name="fa_jA" rows="2">${esc(c.jAprov)}</textarea></label>
+    ${simNao('fa_corr', 'Necessita de corretiva?', c.corr)}
+    <label id="fa_jCbox" style="display:none">Justificativa: por que precisa de corretiva (abre uma OS de corretiva para o equipamento)<textarea name="fa_jC" rows="2">${esc(c.jCorr)}</textarea></label>`);
 }
-function parseEnc(d, c) {
-  const f = { aprov: c.fa_aprov || '', corr: c.fa_corr || '' };
+// mostra a justificativa quando aprovado = Não ou corretiva = Sim; só exige com o bloco visível
+function encSync() {
+  const fm = document.getElementById('form'); if (!fm || !fm.elements.fa_aprov) return;
+  const t = fm.elements.tipo && fm.elements.tipo.value, ativo = t === 'Calibração' || t === 'Qualificação térmica';
+  const radio = n => (fm.querySelector('input[name="' + n + '"]:checked') || {}).value;
+  [['fa_jA', radio('fa_aprov') === 'Não'], ['fa_jC', radio('fa_corr') === 'Sim']].forEach(([n, v]) => {
+    document.getElementById(n + 'box').style.display = v ? '' : 'none';
+    fm.elements[n].required = v && ativo;
+  });
+}
+function parseEnc(d, c, prev) {
+  const f = { aprov: c.fa_aprov || '', corr: c.fa_corr || '', jAprov: c.fa_aprov === 'Não' ? (c.fa_jA || '').trim() : '', jCorr: c.fa_corr === 'Sim' ? (c.fa_jC || '').trim() : '', corrOsId: (prev && prev.encerr && prev.encerr.corrOsId) || '' };
+  if (f.aprov === 'Não' && !f.jAprov) { alert('Justifique por que o equipamento não foi aprovado.'); return false; }
+  if (f.corr === 'Sim' && !f.jCorr) { alert('Justifique por que o equipamento precisa de corretiva.'); return false; }
   if (d.status === 'Concluída') {
     const falta = [['aprov', 'Equipamento aprovado'], ['corr', 'Necessita de corretiva']].find(([k]) => !f[k]);
     if (falta) { alert('Para concluir, responda no encerramento: ' + falta[1] + '? (Sim ou Não).'); return false; }
@@ -153,6 +167,7 @@ document.addEventListener('change', ev => {
     if ($('#corr')) $('#corr').style.display = v === 'Corretiva' ? 'block' : 'none';
     if ($('#enc')) $('#enc').style.display = v === 'Calibração' || v === 'Qualificação térmica' ? 'block' : 'none';
   }
+  if (n === 'fa_aprov' || n === 'fa_corr') encSync();
   if (n === 'fc_cal' || n === 'fc_qual') $('#' + n + 'Box').style.display = v === 'Sim' ? 'block' : 'none';
   if (n === 'chkModelo') $('#chkBody').innerHTML = chkBody(v, {});
   if (/^ci_\d+$/.test(n || '')) { // NC: pede a justificativa do problema
@@ -190,6 +205,7 @@ function chkBody(modeloId, c) {
 function parseChk(d, c, prev) {
   const m = db.checklists.find(x => x.id === c.chkModelo);
   const antes = prev && prev.chk && prev.chk.modeloId === c.chkModelo ? prev.chk.itens : [];
+  if (d.status === 'Concluída' && !m) { alert('Selecione o modelo de checklist para concluir a preventiva.'); return false; }
   if (m) for (let i = 0; i < m.itens.length; i++) if ((c['ci_' + i] || 'C') === 'NC' && !(c['cj_' + i] || '').trim()) { alert(`Justifique o problema encontrado no item não conforme: ${m.itens[i]}`); return false; }
   d.chk = m ? { modeloId: m.id, nome: m.nome, itens: m.itens.map((t, i) => { const r = c['ci_' + i] || 'C', a = antes.find(x => x.t === t) || {}; return { t, r, j: r === 'NC' ? (c['cj_' + i] || '').trim() : '', osId: a.osId || '' }; }), instrumentos: m.instrumentos.filter((t, j) => c['ins_' + j] !== undefined) } : null;
   return true;
@@ -236,14 +252,16 @@ function calibBlock(o) {
     const pd = padById(g.padraoId) || {};
     return `<fieldset id="cg_${i}" class="fsec" style="display:${i < n ? '' : 'none'}"><legend>Padrão ${i + 1} e grandeza ${i + 1}</legend>
    <label>Padrão utilizado<select name="c${i}_padrao" onchange="padPick(${i},this)"><option value="">- selecione -</option>${padOptions(g.padraoId)}</select></label>
-   <div class="two">${fld(`c${i}_grandeza`, 'Grandeza (vazio = pelo tipo do padrão)', g.grandeza, 'text', `placeholder="${esc(GRANDEZA[pd.tipo] || '')}"`)}${fld(`c${i}_unidade`, 'Unidade das leituras', g.unidade || pd.unidade || (i ? '' : '°C'))}</div>
+   <div class="two">${fld(`c${i}_grandeza`, 'Grandeza', g.grandeza, 'text', `placeholder="${esc(GRANDEZA[pd.tipo] || '')}"`)}${fld(`c${i}_unidade`, 'Unidade das leituras', g.unidade || pd.unidade || (i ? '' : '°C'))}</div>
    <div class="two">${fld(`c${i}_resolucao`, 'Resolução do instrumento', g.resolucao)}${fld(`c${i}_faixaCol`, 'Faixa coletada (ex.: 2 à 8 °C)', g.faixaCol)}</div>
    <div class="two">${fld(`c${i}_ema`, 'Erro máximo admissível (±)', g.ema, 'number', 'step=any min=0')}${fld(`c${i}_uOutros`, 'Outras contribuições de incerteza (opcional)', g.uOutros, 'number', 'step=any min=0')}</div>
+   <p class="note emaRec" id="emaRec_${i}" style="display:none;margin:-4px 0 8px"></p>
    <table id="rd_${i}"><thead><tr><th>#</th><th>Valor nominal (padrão)</th><th>Leitura do equipamento</th><th>U (vazio = automático)</th><th></th></tr></thead><tbody>${rows.map((r, j) => readRow(i, j, r)).join('')}</tbody></table>
    <p><button type="button" class="sm ghost" onclick="addReading(${i})">Adicionar ponto</button></p></fieldset>`;
   };
   return box('calib', 'Calibração', o.tipo === 'Calibração', `
    <div class="two">${sel('nPad', 'Quantidade de padrões / grandezas', ['1', '2', '3'], String(n), 'onchange="nPadSel(this.value)"')}${fld('kfat', 'Fator de abrangência (k)', o.kfat || 2, 'number', 'step=any min=1')}</div>
+   <p class="note" id="calRef" style="display:none"></p>
    ${db.padroes.some(p => (p.validade || '') < today()) ? '<p class="note">Padrões vencidos não aparecem na lista.</p>' : ''}
    <p class="note">Cada padrão corresponde a uma grandeza, com as suas próprias leituras e resultado no certificado.</p>
    <div class="two">${fld('lacre', 'Lacre do equipamento', o.lacre)}${sel('localCal', 'Local da calibração', ['Realizada no cliente', 'Realizada no laboratório'], o.localCal)}</div>
@@ -252,12 +270,26 @@ function calibBlock(o) {
    ${[0, 1, 2].map(grupo).join('')}
    <p class="note">Com uma única leitura por ponto, a repetitividade (uA) é zero. U automático = k · √(uA² + u padrão² + u resolução² + outras²), com u padrão = U do certificado ÷ k do certificado e u resolução = resolução/√12. Aceitação: |média − nominal| + U ≤ erro máximo admissível.</p>`);
 }
-function nPadSel(n) { [0, 1, 2].forEach(i => { $('#cg_' + i).style.display = i < +n ? '' : 'none'; }); }
+// recomendações vindas do cadastro do equipamento escolhido (desvio admissível e faixa de trabalho)
+// desvio e faixa do equipamento; se ele não tiver (cadastrado antes), usa o do catálogo pelo nome do tipo (nome igual ou começando com o nome do catálogo)
+function refEquip(e) {
+  if (e.desvio || e.faixaTrab) return { desvio: e.desvio, faixaTrab: e.faixaTrab };
+  const n = norm(e.nome); let c = null;
+  for (const x of db.catalogo || []) { const cn = norm(x.nome); if (cn && (n === cn || n.startsWith(cn + ' ')) && (!c || cn.length > norm(c.nome).length)) c = x; }
+  return c ? { desvio: c.desvio, faixaTrab: c.faixa } : {};
+}
+function calRefSync() {
+  const fm = document.getElementById('form'); if (!fm || !fm.elements.equipId || !document.getElementById('calRef')) return;
+  const eq = equipById(fm.elements.equipId.value) || {}, e = refEquip(eq);
+  document.querySelectorAll('.emaRec').forEach(p => { p.style.display = e.desvio ? '' : 'none'; p.innerHTML = e.desvio ? `Recomendado (cadastro do equipamento): desvio admissível <b>± ${esc(e.desvio)}</b>. Digite o valor acima.` : ''; });
+  const r = document.getElementById('calRef'); r.style.display = e.faixaTrab ? '' : 'none'; r.innerHTML = e.faixaTrab ? `Faixa de trabalho cadastrada no equipamento: <b>${esc(e.faixaTrab)}</b>.` : '';
+}
+function nPadSel(n) { [0, 1, 2].forEach(i => { $('#cg_' + i).style.display = i < +n ? '' : 'none'; }); if (typeof osSync === 'function') osSync(false); }
 // ao escolher o padrão, sugere a unidade dele se o campo ainda estiver vazio
 function padPick(i, s) {
   const p = padById(s.value) || {}, un = form.elements['c' + i + '_unidade'], gr = form.elements['c' + i + '_grandeza'];
   if (un && !un.value && p.unidade) un.value = p.unidade;
-  if (gr) gr.placeholder = GRANDEZA[p.tipo] || '';
+  if (gr) { gr.placeholder = GRANDEZA[p.tipo] || ''; if (!gr.value && GRANDEZA[p.tipo]) gr.value = GRANDEZA[p.tipo]; } // sugere a grandeza pelo tipo do padrão
 }
 function padOk(d) {
   for (const p of padsDe(d).map(padById)) {
@@ -287,6 +319,9 @@ function parseCalib(d, c) {
     if (d.status === 'Concluída') {
       const pd = padById(g.padraoId);
       if (!g.padraoId) { alert(`Selecione o padrão utilizado na calibração${rot}.`); return false; }
+      if (!g.grandeza.trim()) { alert(`Informe a grandeza${rot}.`); return false; }
+      if (!(num(g.resolucao) > 0)) { alert(`Informe a resolução do instrumento${rot}.`); return false; }
+      if (String(g.ema).trim() === '') { alert(`Informe o erro máximo admissível${rot}.`); return false; }
       if (!g.leituras.length) { alert(`Informe ao menos um ponto com leituras${rot}.`); return false; }
       if (g.leituras.some(r => !r.uManual) && (!pd || !(+pd.incU > 0) || !(num(g.resolucao) > 0))) {
         alert(`Para calcular a incerteza automaticamente${rot}, o padrão precisa ter U do certificado cadastrado e é preciso informar a resolução do instrumento. Ou digite U manualmente em cada ponto.`); return false;
@@ -326,7 +361,7 @@ function qualBlock(o) {
    <label>Padrão / termômetro de referência<select name="padraoQ"><option value="">- selecione -</option>${padOptions(o.padraoId)}</select></label>
    ${fld('q_tipo', 'Tipo de ensaio', q.tipo || 'Qualificação Térmica de Performance')}
    <div class="two">${fld('q_min', 'Limite inferior da faixa de trabalho', q.min, 'number', 'step=any')}${fld('q_max', 'Limite superior da faixa de trabalho', q.max, 'number', 'step=any')}</div>
-   <div class="two">${fld('q_un', 'Unidade', q.un || '°C')}${sel('q_carga', 'Condição', ['Com carga', 'Sem carga'], q.carga)}</div>
+   <div class="two">${fld('q_un', 'Unidade', q.un || '°C')}${sel('q_carga', 'Condição', [['', '- selecione -'], 'Com carga', 'Sem carga'].map(x => Array.isArray(x) ? x : [x, x]), q.carga)}</div>
    <div class="two">${fld('q_dur', 'Tempo de estudo / de ciclo (ex.: 12 horas)', q.dur)}${fld('q_ciclos', 'Quantidade de ciclos', q.ciclos || '1 ciclo')}</div>
    <div class="two">${fld('q_parada', 'Teste de parada (tempo)', q.parada)}${fld('q_porta', 'Teste de abertura de porta', q.porta)}</div>
    <div class="two">${fld('q_ctrl', 'Sensor em paralelo ao controlador (ex.: A01)', q.ctrl)}<span></span></div>
@@ -446,8 +481,10 @@ function parseQual(d, c, prev) {
   for (const k of Object.keys(c)) if (/^q_(?!c_|m_|n_|p_|dados)/.test(k)) d.qual[k.slice(2)] = c[k];
   if (d.status === 'Concluída') {
     if (!d.padraoId) { alert('Selecione o padrão utilizado na qualificação.'); return false; }
-    if (!ser.rows.length) { alert('Cole os dados do data logger.'); return false; }
+    if (!ser.rows.length) { alert('Importe os dados do data logger (PDFs ou tabela colada).'); return false; }
     if (d.qual.min === '' || d.qual.max === '') { alert('Informe os limites da faixa de trabalho.'); return false; }
+    const eq = equipById(d.equipId), falta = [['carga', 'a condição (com carga ou sem carga)'], ['dur', 'o tempo de estudo'], ['porta', 'o teste de abertura de porta'], ['ctrl', 'o sensor em paralelo ao controlador'], ...(ehFreezer(eq) ? [['parada', 'o teste de parada (obrigatório para freezer)']] : [])].find(([k]) => !String(d.qual[k] || '').trim());
+    if (falta) { alert('Para concluir a qualificação, informe ' + falta[1] + '.'); return false; }
     if (+d.qual.min > +d.qual.max) { alert('O limite inferior não pode ser maior que o superior.'); return false; }
   }
   return padOk(d);
@@ -462,7 +499,7 @@ function parseOSExtras(d, prev) {
   const fc = take(/^fc_/);
   const fa = take(/^fa_/);
   d.chk = null; d.qual = null; d.leituras = []; d.padraoIds = []; d.cals = []; d.fecha = null; d.encerr = null;
-  if ((d.tipo === 'Calibração' || d.tipo === 'Qualificação térmica') && !parseEnc(d, fa)) return false;
+  if ((d.tipo === 'Calibração' || d.tipo === 'Qualificação térmica') && !parseEnc(d, fa, prev)) return false;
   if (d.tipo === 'Preventiva') { d.padraoId = ''; return parseChk(d, chk, prev); }
   if (d.tipo === 'Qualificação térmica') return parseQual(d, q, prev);
   if (d.tipo === 'Calibração') return parseCalib(d, cal);

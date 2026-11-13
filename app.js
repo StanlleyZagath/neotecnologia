@@ -16,63 +16,105 @@ const EMPRESA_PADRAO = {
   razao: 'NEO TECNOLOGIA AMPLA', cnpj: '20.038.586/0001-90', ie: '15.445.597-0', rua: '7 de Setembro, nº 33', bairro: 'Tapanã',
   cidade: 'Belém', uf: 'PA', cep: '66830-320', fone: '(91) 84841691 / 980499656 ou 982110237', email: 'neotecnologiaampla@hotmail.com',
   respTec: 'Diego Coimbra de Oliveira', respTecCargo: 'Adm. Engº Mecatrônico - Diretor de Conformidade Clínica',
-  engResp: 'Marcos César Silva de Souza', engCrea: 'CREA-RJ Nº 201096176-5',
+  engResp: '', engCrea: '',
   tecColetor: 'Daniel Oliveira', tecCft: 'CFT-PA Nº 24486051220',
   procedimento: 'PROCEDIMENTO PARA SERVIÇOS INTERNOS E EXTERNOS EM GERAL. A CALIBRAÇÃO FOI REALIZADA ATRAVÉS DO METODO DE COMPARAÇÃO DIRETA COM O PADRÃO.',
   obsIncerteza: 'A Incerteza expandida de medição relatada é declarada como incerteza padrão de medição multiplicada pelo fator de abrangência K, de tal forma que a probabilidade de abrangência corresponde a aproximadamente 95%',
   normas: 'ABNT NBR12550, NBR-ISO IEC 17025, DKD-R 5-7, ISO GUM 2008, ABNT-NBR 16328:2014',
 };
-const CHECKLIST_EXEMPLO = {
-  id: 'chk-exemplo', nome: 'Balança Pediátrica',
-  itens: ['Ajustes na plataforma de pesagem', 'Verificar fonte de alimentação', 'Nivelamento do equipamento', 'Avaliação da célula de carga',
-    'Verificação da integridade do visor', 'Ajustes de calibração se necessário', 'Verificação da régua métrica', 'Limpeza externa do equipamento'],
-  instrumentos: ['Multímetro', 'Peso padrão', 'Alicate amperímetro'],
-};
+// Catálogo oficial (planilha IESFE-RGT-001, rev. 3): [tipo, preventiva, calibração, qualificação térmica (dias), desvio admissível, faixa de trabalho]
 const CATALOGO_PADRAO = [
-  ['Monitor multiparâmetro', 'Monitorização de sinais vitais', 180, 365, 0],
-  ['Ventilador pulmonar', 'Suporte ventilatório', 90, 365, 0],
-  ['Bomba de infusão', 'Infusão controlada de medicamentos', 180, 365, 0],
-  ['Desfibrilador', 'Reversão de arritmias cardíacas', 90, 365, 0],
-  ['Cardioversor', 'Cardioversão elétrica', 90, 365, 0],
-  ['Eletrocardiógrafo', 'Registro de ECG', 180, 365, 0],
-  ['Oxímetro de pulso', 'Medição de SpO2', 180, 365, 0],
-  ['Esfigmomanômetro', 'Medição de pressão arterial', 180, 365, 0],
-  ['Termômetro clínico', 'Medição de temperatura corporal', 0, 365, 0],
-  ['Balança pediátrica', 'Pesagem de lactentes', 180, 365, 0],
-  ['Balança adulto', 'Pesagem de pacientes', 180, 365, 0],
-  ['Incubadora neonatal', 'Suporte térmico ao recém-nascido', 90, 365, 0],
-  ['Berço aquecido', 'Aquecimento do recém-nascido', 90, 365, 0],
-  ['Fototerapia', 'Tratamento de icterícia neonatal', 180, 365, 0],
-  ['Aspirador cirúrgico', 'Aspiração de secreções', 180, 0, 0],
-  ['Bisturi elétrico', 'Corte e coagulação eletrocirúrgica', 180, 365, 0],
-  ['Foco cirúrgico', 'Iluminação do campo operatório', 180, 0, 0],
-  ['Mesa cirúrgica', 'Posicionamento do paciente', 180, 0, 0],
-  ['Cama hospitalar elétrica', 'Acomodação do paciente', 180, 0, 0],
-  ['Ultrassom diagnóstico', 'Diagnóstico por imagem', 180, 365, 0],
-  ['Raio-X móvel', 'Diagnóstico por imagem', 180, 365, 0],
-  ['Autoclave', 'Esterilização a vapor', 120, 365, 365],
-  ['Estufa de esterilização e secagem', 'Esterilização por calor seco', 120, 365, 365],
-  ['Refrigerador de vacinas', 'Armazenamento de imunobiológicos (2 a 8 °C)', 90, 365, 365],
-  ['Refrigerador de bolsas de sangue', 'Armazenamento de hemocomponentes', 90, 365, 365],
-  ['Freezer de plasma', 'Armazenamento de plasma congelado', 90, 365, 365],
-  ['Banho-maria', 'Aquecimento controlado de amostras', 180, 365, 0],
-  ['Centrífuga', 'Separação de amostras', 180, 365, 0],
-  ['Capela de fluxo laminar', 'Ambiente de trabalho estéril', 180, 365, 0],
-  ['Termohigrômetro', 'Medição de temperatura e umidade', 0, 365, 0],
-].map((c, i) => ({ id: 'cat-' + (i + 1), nome: c[0], funcao: c[1], perPrev: c[2] || '', perCal: c[3] || '', perQual: c[4] || '' }));
+  ["AFÉRESE",180,365,"","APROVADO","MANUAL"],
+  ["AGITADOR DE PLAQUETA",180,"","","5%","70 oscilações por minuto"],
+  ["AGLUTINOSCÓPIO","","","","",""],
+  ["ASPIRADOR",180,"","","",""],
+  ["AUTOCLAVE",180,180,"","2°C 5segundos","120°C 60 minutos"],
+  ["BALANÇA ANTROPOMÉTRICA DIGITAL",180,365,"","5%","0 a 150kg"],
+  ["BALANÇA ANTROPOMÉTRICA MECÂNICA",180,365,"","5%","0 a 150kg"],
+  ["BALANÇA ELETRÔNICA",180,365,"","5%","5 pontos dentro da escala"],
+  ["BALANÇA NEO",180,365,"","5%","0 a 50kg"],
+  ["BANHO MARIA",180,180,"","0,6°C","36,4°C (37°C ALARME)"],
+  ["CÂMARA DE CONSERVAÇÃO DE SANGUE 4°C",180,180,365,"1°C","2 a 6°C / (0,5°C ALARME)"],
+  ["CÂMARA DE CONSERVAÇÃO DE VACINAS 4°C",180,180,365,"1°C","2 a 8°C / (0,5°C ALARME)"],
+  ["CENTRÍFUGA DE BANCADA DE TUBOS",120,120,"","5%RPM / 10segundos","1000 e 3500RPM / 10 a 600s"],
+  ["CENTRÍFUGA DE BANCADA PLACA","",180,"","5%RPM / 10segundos","990 e 3200RPM / 10 a 600s"],
+  ["CENTRÍFUGA DE CHÃO REFRIGERADA",120,120,"","5%RPM / 10segundos / 1°C","2600 a 4000 RPM / 10 a 600s / 22 a -20°C"],
+  ["CRONÔMETRO DIGITAL","",365,"","5segundos","60 minutos"],
+  ["DATA LOGGER","",365,"","1°C","3 pontos dentro da escala de trabalho"],
+  ["DESFIBRILADOR",180,365,"","5% J","MANUAL"],
+  ["DISPENSADOR DE DILUENTES","",180,"","7%","3 pontos dentro da escala de trabalho"],
+  ["ESFIGMOMANÔMETRO ANALÓGICO","",180,"","4 mmHg","120 mmHg a 170 mmHg"],
+  ["ESFIGMOMANÔMETRO DIGITAL","",180,"","4 mmHg","120 mmHg a 170 mmHg"],
+  ["FREEZER",180,180,365,"2°C","Menor ou Igual a - 20 a -30°C (1°C ALARME)"],
+  ["FREEZER DOMÉSTICO",180,180,"","","-20°c"],
+  ["GELADEIRA DOMÉSTICA",180,180,"","",""],
+  ["HEMOGLOBINÔMETRO",365,"","","",""],
+  ["HOMOGENEIZADOR DE BOLSAS (COMPGUARD)",180,180,"","5% g","500 g"],
+  ["INCUBADORA PARA PLACAS","",180,"","1°C","37°C"],
+  ["LARINGOSCÓPIO","","","","",""],
+  ["MANÔMETRO/CILINDRO DE OXIGENIO",180,"","","MANUAL","MANUAL"],
+  ["PESO PADRÃO CLASSE F1","",365,"","5%g","500g"],
+  ["PIPETA","",180,"","7%",""],
+  ["POLTRONA PARA COLETA DE SANGUE",180,"","","",""],
+  ["PROCESSADOR E FRACIONADOR AUTOMÁTICO DE BOLSA G5 COMPOMAT",180,180,"","5%g","3 pontos em cada balança"],
+  ["QUEBRADOR DE LACRE","","","","",""],
+  ["SELADORA DE BANCADA PARA TUBO DE PVC DE BOLSAS DE SANGUE",180,"","","",""],
+  ["SELADORA DE CONEXÃO ESTÉRIL COMPODOCK",180,"","","",""],
+  ["SELADORA PORTÁTIL PARA TUBO PVC DE BOLSAS DE SANGUE",180,"","","",""],
+  ["TERMOBLOCO",180,180,"","1°C","37 a 56°C"],
+  ["TERMÔMETRO CLÍNICO DIGITAL","",180,"","1°C","37°C"],
+  ["TERMÔMETRO COM SONDA EXTERNA","",180,"","1°C","-10 a 24°C"],
+  ["TERMÔMETRO DIGITAL INFRAVERMELHO FRONTAL","",180,"","1°C","37°C"],
+  ["TERMÔMETRO INFRAVERMELHO","",180,"","1°C","-10 a 24°C"],
+  ["TERMÔMETRO SEM SONDA EXTERNA","",180,"","1°C","-10 a 24°C"],
+  ["BALANÇA ANALÍTICA",180,365,"","5%","5 pontos dentro da escala"],
+  ["FREEZER -20°C",180,180,365,"2°C","Menor ou Igual a -20°C"],
+  ["ITIMER","",365,"","",""],
+  ["TERMÔMETRO CLÍNICO ANALÓGICO","",180,"","1°C","37°C"],
+  ["AGITADOR DE TUBOS",365,"","","",""],
+  ["AGITADOR ORBITAL",365,"","","",""],
+  ["BALANÇA SEMI-ANALÍTICA",180,365,"","5%","5 pontos dentro da escala"],
+  ["BOMBA DE INFUSÃO",365,365,"","MANUAL","MANUAL"],
+  ["CÂMARA AMBIENTADORA DE PLAQUETAS",180,180,365,"1°C","20 a 24°C"],
+  ["CAPELA DE FLUXO LAMINAR",180,365,"","APROVADO","QUALIFICAÇÃO DA VAZÃO E QUALIDADE DO AR"],
+  ["CENTRÍFUGA DE BANCADA DE MICROHEMATÓCRITO",120,120,"","5%RPM / 5segundos","2400 e 3200RPM / 10 a 600s"],
+  ["CENTRÍFUGA DE BANCADA LAVADORA DE CÉLULAS",120,120,"","5%RPM / 5segundos","2400 e 3200RPM / 10 a 600s"],
+  ["CORADOR DE LÂMINAS","","","","",""],
+  ["CUBA DE ELETROFORESE",365,"","","",""],
+  ["DEIONIZADOR","","","","",""],
+  ["ELETROCARDIÓGRAFO",180,365,"","MANUAL","MANUAL"],
+  ["ESTUFA DE SECAGEM",180,365,"","2°C","100°C"],
+  ["OXÍMETRO DE PULSO PORTÁTIL","",180,"","SATURAÇÃO DE OXIGÊNIO 5% / BPM 15%","SPO2 - 70 % a 100% / BPM 30 a 240"],
+  ["FONTE PARA CUBA DE ELETROFORESE",365,"","","",""],
+  ["FREEZER -80°C",180,180,365,"2°C","Menor ou Igual a -80°C"],
+  ["FRIGOBAR",180,"","","",""],
+  ["HOMOGENIZADOR DE TUBO",180,"","","",""],
+  ["INCUBADORA PARA INDICADORES BIOLÓGICOS",365,365,"","1°C","15 a 40 °C"],
+  ["SELADORA PARA PAPEL GRAU CIRÚRGICO",365,"","","",""],
+  ["LARINGOSCÓPIO CONVENCIONAL - ADULTO",365,"","","",""],
+  ["MICRO CENTRIFUGA",120,120,"","5%RPM / 5segundos","2400 e 3200RPM / 10 a 600s"],
+  ["MICROSCÓPIO",365,"","","",""],
+  ["PIPETADOR MOTORIZADO TIPO AID",180,"","","",""],
+  ["EXTRATOR DE PLASMA G5",365,"","","",""],
+  ["SISTEMA OSMOSE REVERSA",180,365,"","APROVADO","QUALIDADE DA ÁGUA REAGENTE"],
+  ["TERMÔMETRO COM TERMOHIGRÔMETRO","",180,"","1°C","-10 a 24°C"]
+].map((c, i) => ({ id: 'cat-' + (i + 1), nome: c[0], funcao: '', perPrev: c[1], perCal: c[2], perQual: c[3], desvio: c[4], faixa: c[5] }));
 const tecsPadrao = () => [{ id: 'tec-1', nome: EMPRESA_PADRAO.tecColetor, registro: EMPRESA_PADRAO.tecCft }];
 const migraPad = p => { if (p.cert) { p.certs = [p.cert]; delete p.cert; } return p; };
 function load() {
-  const base = { equip: [], os: [], padroes: [], clientes: [], seq: 0 };
+  const base = { equip: [], os: [], padroes: [], clientes: [], pedidos: [], seq: 0 };
   let d = {};
   try { d = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { d = {}; }
   const r = { ...base, ...d };
   r.empresa = { ...EMPRESA_PADRAO, ...(d.empresa || {}) };
-  if (!d.checklists) r.checklists = [CHECKLIST_EXEMPLO];
+  if (!d.checklists) r.checklists = [];
+  // limpeza de dados que antes vinham de fábrica: engenheiro responsável e checklist de exemplo (este só sai se nada o usa)
+  if (r.empresa.engResp === 'Marcos César Silva de Souza' && r.empresa.engCrea === 'CREA-RJ Nº 201096176-5') r.empresa.engResp = r.empresa.engCrea = '';
+  if (Array.isArray(r.checklists) && !r.equip.some(e => e.checklistId === 'chk-exemplo') && !r.os.some(o => o.chk && o.chk.modeloId === 'chk-exemplo')) r.checklists = r.checklists.filter(c => c.id !== 'chk-exemplo');
   r.padroes = r.padroes.map(migraPad);
   if (!d.tecnicos) r.tecnicos = tecsPadrao();
   r.equip = r.equip.map(e => { if (e.patrimonio !== undefined) { e.tag = e.tag || e.patrimonio; delete e.patrimonio; } return e; });
-  if (!d.catalogo) r.catalogo = CATALOGO_PADRAO.map(c => ({ ...c }));
+  if (!d.catalogo || d.catalogoVer !== 2) { r.catalogo = CATALOGO_PADRAO.map(c => ({ ...c })); r.catalogoVer = 2; } // catálogo substituído pelo da planilha IESFE-RGT-001 (uma vez)
   return r;
 }
 db = load();
@@ -131,7 +173,7 @@ function render() {
   const prim = [...document.querySelectorAll('#bnav button[data-tab]')].some(b => b.dataset.tab === tab);
   $('#moreBtn').classList.toggle('active', !prim);
   closeMore();
-  $('#view').innerHTML = ({ dashboard: vDash, equip: vEquip, os: vOS, pad: vPad, prev: vPrev, ind: vInd, cli: vCli, chk: vChk, cat: vCat, tec: vTec })[tab]();
+  $('#view').innerHTML = ({ dashboard: vDash, equip: vEquip, os: vOS, pad: vPad, prev: vPrev, ind: vInd, cli: vCli, chk: vChk, cat: vCat, tec: vTec })[tab](); if (typeof osLoteUI === 'function') osLoteUI();
   renderAlerts();
 }
 
@@ -250,19 +292,21 @@ function vDash() {
   const i = indicators();
   const abertas = db.os.filter(o => o.status !== 'Concluída').length;
   const manut = db.equip.filter(e => e.status === 'Em manutenção').length;
-  const venc = db.equip.filter(e => e.perPrev && nextDue(e, 'prev') < today()).length;
-  const calV = db.equip.filter(e => e.perCal && nextDue(e, 'cal') < today()).length;
-  const qualV = db.equip.filter(e => e.perQual && nextDue(e, 'qual') < today()).length;
+  // itens da programação por tipo e situação (bad = vencidos, warn = vencem em até 30 dias)
+  const prog = (k, c) => db.equip.filter(e => { const d = nextDue(e, k); return d && dueStatus(d)[1] === c; }).length;
   const padV = db.padroes.filter(p => padStatus(p)[1] === 'bad').length;
   const padA = db.padroes.filter(p => padStatus(p)[1] === 'warn').length;
-  const att = (n, l, tabName, cls) => `<button class="${n ? cls : ''}" onclick="tab='${tabName}';render()"><div class="n">${n}</div><div class="l">${l}${n ? '' : ' · em dia'}</div></button>`;
+  const att = (n, l, tabName, cls, fil) => `<button class="${n ? cls : ''}" onclick="${fil ? `F.prev={tipo:'${fil[0]}',sit:'${fil[1]}'};` : ''}tab='${tabName}';render()"><div class="n">${n}</div><div class="l">${l}${n ? '' : ' · em dia'}</div></button>`;
   const recent = db.os.slice().sort((a, b) => b.abertura.localeCompare(a.abertura)).slice(0, 6);
   return `<div class="attn" role="group" aria-label="Pendências">
     ${att(padV, 'Padrões vencidos (não usar)', 'pad', 'bad')}
     ${att(padA, 'Padrões vencendo em 30 dias', 'pad', 'warn')}
-    ${att(venc, 'Preventivas vencidas', 'prev', 'bad')}
-    ${att(calV, 'Calibrações vencidas', 'prev', 'bad')}
-    ${att(qualV, 'Qualificações térmicas vencidas', 'prev', 'bad')}
+    ${att(prog('prev', 'bad'), 'Preventivas vencidas', 'prev', 'bad', ['prev', 'bad'])}
+    ${att(prog('prev', 'warn'), 'Preventivas a vencer em 30 dias', 'prev', 'warn', ['prev', 'warn'])}
+    ${att(prog('cal', 'bad'), 'Calibrações vencidas', 'prev', 'bad', ['cal', 'bad'])}
+    ${att(prog('cal', 'warn'), 'Calibrações a vencer em 30 dias', 'prev', 'warn', ['cal', 'warn'])}
+    ${att(prog('qual', 'bad'), 'Qualificações térmicas vencidas', 'prev', 'bad', ['qual', 'bad'])}
+    ${att(prog('qual', 'warn'), 'Qualificações térmicas a vencer em 30 dias', 'prev', 'warn', ['qual', 'warn'])}
   </div>
   <p class="stats"><span><b>${db.equip.length}</b>equipamentos</span><span><b>${abertas}</b>OS abertas</span><span><b>${manut}</b>em manutenção</span><span><b>${f1(i.disp, '%')}</b>disponibilidade (12 meses)</span></p>
   <div class="bar"><h2>Últimas ordens de serviço</h2></div>
@@ -293,8 +337,8 @@ function vEquip() {
     && (!fv('equip', 'crit') || e.crit === fv('equip', 'crit')) && (!fv('equip', 'setor') || e.setor === fv('equip', 'setor')));
   return `<div class="bar"><h2>Inventário de equipamentos</h2><button onclick="editEquip()">Novo equipamento</button></div>
   ${fbar('equip', ftxt('equip', 'q', 'Patrimônio / tag, nome, série...') + fsel('equip', 'cli', 'Cliente', cliOpts()) + fsel('equip', 'status', 'Status', uniq(db.equip.map(e => e.status))) + fsel('equip', 'crit', 'Criticidade', uniq(db.equip.map(e => e.crit))) + fsel('equip', 'setor', 'Setor', uniq(db.equip.map(e => e.setor))), list.length, db.equip.length)}
-  <div class="wrap"><table><tr><th>Patrimônio / tag</th><th>Equipamento</th><th>Fabricante / modelo</th><th>Setor</th><th>Crit.</th><th>Serviços</th><th>Status</th><th></th></tr>
-  ${list.map(e => `<tr><td>${esc(e.tag)}</td><td>${esc(e.nome)}<br><span class="l">${clienteNome(e) ? esc(clienteNome(e)) + ' · ' : ''}S/N ${esc(e.serie)}</span></td><td>${esc(e.fabricante)} ${esc(e.modelo)}</td><td>${esc(e.setor)}</td>
+  <div class="wrap"><table><tr><th>Patrimônio / tag</th><th>Equipamento</th><th>Fabricante / modelo</th><th>Cliente / setor</th><th>Crit.</th><th>Serviços</th><th>Status</th><th></th></tr>
+  ${list.map(e => `<tr><td>${esc(e.tag)}</td><td>${esc(e.nome)}<br><span class="l">S/N ${esc(e.serie)}</span></td><td>${esc(e.fabricante)} ${esc(e.modelo)}</td><td>${esc(clienteNome(e))}${e.setor ? `<br><span class="l">${esc(e.setor)}</span>` : ''}</td>
    <td><span class="tag ${e.crit === 'Alta' ? 'bad' : e.crit === 'Média' ? 'warn' : 'ok'}">${esc(e.crit)}</span></td>
    <td>${[['perPrev', 'Preventiva'], ['perCal', 'Calibração'], ['perQual', 'Qualif. térmica']].filter(([k]) => e[k]).map(([k, t]) => `<span class="tag svc-tag">${t} · ${perTxt(e[k])}</span>`).join(' ') || '<span class="l">nenhum</span>'}</td>
    <td><span class="tag ${e.status === 'Operacional' ? 'ok' : e.status === 'Em manutenção' ? 'warn' : 'bad'}">${esc(e.status)}</span></td>
@@ -335,11 +379,11 @@ function delTec(id) { if (confirm('Excluir este técnico da lista? As OS já reg
 
 function vCat() {
   const q = fv('cat', 'q').toLowerCase();
-  const list = db.catalogo.filter(c => !q || [c.nome, c.funcao].join(' ').toLowerCase().includes(q)).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+  const list = db.catalogo.filter(c => !q || [c.nome, c.funcao, c.faixa].join(' ').toLowerCase().includes(q)).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
   return `<div class="bar"><h2>Catálogo de tipos de equipamento</h2><button onclick="editCat()">Novo tipo</button></div>
   ${fbar('cat', ftxt('cat', 'q', 'Nome ou função...'), list.length, db.catalogo.length)}
-  <div class="wrap"><table><tr><th>Tipo de equipamento</th><th>Função</th><th>Preventiva</th><th>Calibração</th><th>Qualif. térmica</th><th></th></tr>
-  ${list.map(c => `<tr><td>${esc(c.nome)}</td><td>${esc(c.funcao)}</td><td>${esc(perTxt(c.perPrev))}</td><td>${esc(perTxt(c.perCal))}</td><td>${esc(perTxt(c.perQual))}</td>
+  <div class="wrap"><table><tr><th>Tipo de equipamento</th><th>Preventiva</th><th>Calibração</th><th>Desvio admissível (±)</th><th>Faixa de trabalho</th><th>Qualif. térmica</th><th></th></tr>
+  ${list.map(c => `<tr><td>${esc(c.nome)}${c.funcao ? `<br><span class="l">${esc(c.funcao)}</span>` : ''}</td><td>${esc(perTxt(c.perPrev))}</td><td>${esc(perTxt(c.perCal))}</td><td>${esc(c.desvio)}</td><td>${esc(c.faixa)}</td><td>${esc(perTxt(c.perQual))}</td>
    <td><button class="sm ghost" onclick="editCat('${c.id}')">Editar</button> <button class="sm danger" onclick="delCat('${c.id}')">Excluir</button></td></tr>`).join('')}
   </table></div>${list.length ? '' : '<div class="empty">Nenhum tipo encontrado.</div>'}
   <p class="note">Estes tipos aparecem na lista ao cadastrar um equipamento, que já preenche função e periodicidades sugeridas (você pode alterar).</p>`;
@@ -349,6 +393,7 @@ function editCat(id) {
   openForm(id ? 'Editar tipo' : 'Novo tipo de equipamento', `
     ${fld('nome', 'Tipo de equipamento', c.nome, 'text', 'required')}
     ${fld('funcao', 'Função', c.funcao)}
+    <div class="two">${fld('desvio', 'Desvio admissível (±)', c.desvio)}${fld('faixa', 'Faixa de trabalho', c.faixa)}</div>
     <fieldset class="svcs"><legend>Periodicidade sugerida</legend>
       <div class="two">${catPerField('perPrev', 'Preventiva', c.perPrev)}${catPerField('perCal', 'Calibração', c.perCal)}</div>
       ${catPerField('perQual', 'Qualificação térmica', c.perQual)}
@@ -378,8 +423,8 @@ function delCat(id) { if (confirm('Excluir este tipo do catálogo? Equipamentos 
 
 function osTable(list, actions = true) {
   if (!list.length) return '<div class="empty">Nenhuma ordem de serviço.</div>';
-  return `<div class="wrap"><table><tr><th>Nº</th><th>Equipamento</th><th>Tipo</th><th>Prioridade</th><th>Abertura</th><th>Status</th><th>Custo</th>${actions ? '<th></th>' : ''}</tr>
-  ${list.map(o => `<tr><td>${esc(o.numero)}</td><td>${esc(equipName(o.equipId))}<br><span class="l">${esc(o.descricao)}</span></td><td>${esc(o.tipo)}</td>
+  return `<div class="wrap"><table><tr>${actions ? '<th style="width:34px"><input type="checkbox" id="osAll" title="Marcar todas as exibidas" aria-label="Marcar todas" onchange="osSelAll(this.checked)"></th>' : ''}<th>Nº</th><th>Equipamento</th><th>Tipo</th><th>Prioridade</th><th>Abertura</th><th>Status</th><th>Custo</th>${actions ? '<th></th>' : ''}</tr>
+  ${list.map(o => `<tr>${actions ? `<td><input type="checkbox" data-os="${o.id}" aria-label="Selecionar ${esc(o.numero)}" ${selOS.has(o.id) ? 'checked' : ''} onchange="osSel('${o.id}', this.checked)"></td>` : ''}<td>${esc(o.numero)}</td><td>${esc(equipName(o.equipId))}<br><span class="l">${esc(o.descricao)}</span>${o.pedidoId ? `<br><span class="tag">Pedido: ${esc(pedRotulo(o.pedidoId))}</span>` : ''}</td><td>${esc(o.tipo)}</td>
    <td><span class="tag ${o.prioridade === 'Urgente' ? 'bad' : o.prioridade === 'Alta' ? 'warn' : ''}">${esc(o.prioridade)}</span></td>
    <td>${fmtD(o.abertura)}</td><td><span class="tag ${o.status === 'Concluída' ? 'ok' : 'warn'}">${esc(o.status)}</span></td><td>${brl(o.custo)}</td>
    ${actions ? `<td><button class="sm ghost" onclick="editOS('${o.id}')">Abrir</button> <button class="sm ghost" onclick="printLaudo('${o.id}')">${docLabel(o)}</button><button class="sm danger" onclick="delOS('${o.id}')">Excluir</button></td>` : ''}</tr>`).join('')}
@@ -392,11 +437,11 @@ function vOS() {
     const e = eqDe(o);
     return (!q || [o.numero, e.tag, e.nome, o.descricao, o.tecnico, clienteNome(e)].join(' ').toLowerCase().includes(q))
       && (!fv('os', 'status') || o.status === fv('os', 'status')) && (!fv('os', 'tipo') || o.tipo === fv('os', 'tipo'))
-      && (!fv('os', 'prio') || o.prioridade === fv('os', 'prio')) && (!fv('os', 'cli') || e.clienteId === fv('os', 'cli'))
+      && (!fv('os', 'prio') || o.prioridade === fv('os', 'prio')) && (!fv('os', 'cli') || e.clienteId === fv('os', 'cli')) && (!fv('os', 'pedido') || o.pedidoId === fv('os', 'pedido'))
       && (!fv('os', 'de') || o.abertura >= fv('os', 'de')) && (!fv('os', 'ate') || o.abertura <= fv('os', 'ate'));
   }).sort((a, b) => b.abertura.localeCompare(a.abertura));
-  return `<div class="bar"><h2>Ordens de serviço</h2><button onclick="editOS()" ${db.equip.length ? '' : 'disabled title="Cadastre um equipamento antes"'}>Nova OS</button></div>
-  ${fbar('os', ftxt('os', 'q', 'Nº, equipamento, técnico...') + fsel('os', 'status', 'Status', ['Aberta', 'Em andamento', 'Concluída']) + fsel('os', 'tipo', 'Tipo', ['Corretiva', 'Preventiva', 'Calibração', 'Qualificação térmica']) + fsel('os', 'prio', 'Prioridade', uniq(db.os.map(o => o.prioridade))) + fsel('os', 'cli', 'Cliente', cliOpts()) + fdate('os', 'de', 'Aberta de') + fdate('os', 'ate', 'até'), list.length, db.os.length)}
+  return `<div class="bar"><h2>Ordens de serviço</h2><span><button class="ghost" id="loteBtn" onclick="baixarLote()" disabled>Baixar selecionadas (ZIP)</button> <button onclick="editOS()" ${db.equip.length ? '' : 'disabled title="Cadastre um equipamento antes"'}>Nova OS</button></span></div>
+  ${fbar('os', ftxt('os', 'q', 'Nº, equipamento, técnico...') + fsel('os', 'status', 'Status', ['Aberta', 'Em andamento', 'Concluída']) + fsel('os', 'tipo', 'Tipo', ['Corretiva', 'Preventiva', 'Calibração', 'Qualificação térmica']) + fsel('os', 'prio', 'Prioridade', uniq(db.os.map(o => o.prioridade))) + fsel('os', 'cli', 'Cliente', cliOpts()) + fsel('os', 'pedido', 'Pedido (cliente / mês)', (db.pedidos || []).map(p => [p.id, pedRotulo(p.id)])) + fdate('os', 'de', 'Aberta de') + fdate('os', 'ate', 'até'), list.length, db.os.length)}
   ${osTable(list)}`;
 }
 
@@ -414,10 +459,10 @@ function vPrev() {
   return `<div class="bar"><h2>Programação: preventivas, calibrações e qualificações térmicas</h2></div>
   ${fbar('prev', ftxt('prev', 'q', 'Tag, equipamento, cliente...') + fsel('prev', 'tipo', 'Tipo', [['prev', 'Preventiva'], ['cal', 'Calibração'], ['qual', 'Qualificação térmica']]) + fsel('prev', 'sit', 'Situação', [['bad', 'Vencidas'], ['warn', 'A vencer'], ['ok', 'Em dia']]) + fsel('prev', 'cli', 'Cliente', cliOpts()), rws.length, all)}
   <div class="wrap"><table><tr><th>Equipamento</th><th>Tipo</th><th>Última</th><th>Próxima</th><th>Situação</th><th></th></tr>
-  ${rws.map(({ e, k, d }) => { const [t, c] = dueStatus(d);
+  ${rws.map(({ e, k, d }) => { const [t, c] = dueStatus(d), ab = osAberta(e.id, k);
     return `<tr><td>${esc(e.tag)} - ${esc(e.nome)}</td><td>${KIND[k].label}</td>
-    <td>${fmtD(e[KIND[k].ult])}</td><td>${fmtD(d)}</td><td><span class="tag ${c}">${t}</span></td>
-    <td><button class="sm ghost" onclick="genOS('${e.id}','${k}')">Gerar OS</button></td></tr>`; }).join('')}
+    <td>${fmtD(e[KIND[k].ult])}</td><td>${fmtD(d)}</td><td><span class="tag ${c}">${t}</span>${ab ? `<br><span class="tag warn" title="Já existe uma OS ainda não concluída para este serviço">OS aberta: ${esc(ab.numero)}</span>` : ''}</td>
+    <td>${ab ? `<button class="sm ghost" onclick="tab='os';render();editOS('${ab.id}')">Abrir OS</button>` : `<button class="sm ghost" onclick="genOS('${e.id}','${k}')">Gerar OS</button>`}</td></tr>`; }).join('')}
   </table></div>${rws.length ? '' : '<div class="empty">' + (all ? 'Nenhum item com esses filtros.' : 'Defina periodicidades no cadastro dos equipamentos.') + '</div>'}
   <p class="note">Ao concluir uma OS preventiva ou de calibração, a data da última execução é atualizada automaticamente.</p>`;
 }
@@ -465,16 +510,19 @@ function editEquip(id) {
       ${svcBox('cal', 'Calibração', 'Calibração com padrões e certificado', e)}
       ${svcBox('qual', 'Qualificação térmica', 'Mapeamento e laudo de qualificação', e)}
     </fieldset>
-    ${sel('clienteId', 'Cliente (cadastre na aba Clientes)', [['', '- selecione -'], ...db.clientes.map(c => [c.id, c.nome])], e.clienteId)}
+    ${sel('clienteId', 'Cliente * (cadastre na aba Clientes)', [['', '- selecione -'], ...db.clientes.map(c => [c.id, c.nome])], e.clienteId, `required onchange="dupCheck(this.form.elements.tag,'tag','${id || ''}','Patrimônio / tag')"`)}
     <div class="two">${fld('fabricante', 'Fabricante', e.fabricante)}${fld('modelo', 'Modelo', e.modelo)}</div>
     <div class="two">${fld('funcao', 'Função do equipamento', e.funcao)}${sel('checklistId', 'Modelo de checklist (preventiva)', [['', '- nenhum -'], ...db.checklists.map(c => [c.id, c.nome])], e.checklistId)}</div>
-    <div class="two">${fld('serie', 'Nº de série', e.serie)}${fld('setor', 'Setor', e.setor)}</div>
+    <div class="two">${fld('desvio', 'Desvio admissível (±)', e.desvio)}${fld('faixaTrab', 'Faixa de trabalho', e.faixaTrab)}</div>
+    <div class="two">${fld('serie', 'Nº de série', e.serie)}${fld('setor', 'Setor *', e.setor, 'text', 'required list="setoresList" autocomplete="off"')}</div>
+    <datalist id="setoresList">${uniq(db.equip.map(x => x.setor).filter(Boolean)).map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+    ${fld('unidade', 'Unidade (ex.: AT SEDE)', e.unidade)}
     <div class="two">${sel('crit', 'Criticidade', ['Alta', 'Média', 'Baixa'], e.crit)}${sel('status', 'Status', ['Operacional', 'Em manutenção', 'Inativo'], e.status)}</div>
     <div class="two">${fld('aquisicao', 'Data de aquisição', e.aquisicao, 'date')}${fld('garantia', 'Fim da garantia', e.garantia, 'date')}</div>
 `,
     d => {
       for (const k of SVCS) { if (!d['svc_' + k]) { d['per' + SVC_N[k]] = ''; } delete d['svc_' + k]; }
-      for (const [k, rot] of [['tag', 'Patrimônio / tag']]) { const o = dupDe(k, d[k], id); if (o) { alert(rot + ' já cadastrado no equipamento ' + (o.tag || o.nome) + '.'); return false; } }
+      for (const [k, rot] of [['tag', 'Patrimônio / tag']]) { const o = dupDe(k, d[k], id, d.clienteId); if (o) { alert(rot + ' já cadastrado neste cliente, no equipamento ' + (o.tag || o.nome) + '.'); return false; } }
       if (id) Object.assign(e, d); else db.equip.push({ id: uid(), ...d }); save();
     });
   SVCS.forEach(k => { perInit(k); svcSync(k); });
@@ -507,12 +555,15 @@ function svcSync(k) {
   per.disabled = ult.disabled = s.disabled = !on; s.required = on; per.required = on && s.value === 'custom';
 }
 const norm = s => String(s || '').trim().toLowerCase();
-function dupDe(campo, valor, selfId) { const v = norm(valor); return v ? db.equip.find(x => x.id !== selfId && norm(x[campo]) === v) : null; }
-function dupCheck(inp, campo, selfId, rot) { const o = dupDe(campo, inp.value, selfId); inp.setCustomValidity(o ? `${rot} já cadastrado no equipamento ${o.tag || o.nome}.` : ''); }
+// O mesmo patrimônio/tag pode existir em clientes diferentes; só não pode repetir dentro do mesmo cliente.
+function dupDe(campo, valor, selfId, clienteId) { const v = norm(valor); return v ? db.equip.find(x => x.id !== selfId && norm(x[campo]) === v && (x.clienteId || '') === (clienteId || '')) : null; }
+// equipamento pela tag dentro do cliente (equipamentos antigos sem cliente também servem)
+function eqPorTag(tag, cid) { const v = norm(tag); return v ? (db.equip.find(x => norm(x.tag) === v && (x.clienteId || '') === (cid || '')) || db.equip.find(x => norm(x.tag) === v && !x.clienteId)) : null; }
+function dupCheck(inp, campo, selfId, rot) { const cf = inp.form && inp.form.elements.clienteId, o = dupDe(campo, inp.value, selfId, cf ? cf.value : ''); inp.setCustomValidity(o ? `${rot} já cadastrado neste cliente, no equipamento ${o.tag || o.nome}.` : ''); }
 function catPick(s) {
   const c = db.catalogo.find(x => x.nome === s.value); if (!c) return;
   const set = (n, v) => { const i = form.elements[n]; if (i && !i.value && v) i.value = v; };
-  set('funcao', c.funcao);
+  set('funcao', c.funcao); set('desvio', c.desvio); set('faixaTrab', c.faixa);
   SVCS.forEach(k => { const N = SVC_N[k], box = form.elements['svc_' + k]; if (c['per' + N] && !box.checked && !form.elements['per' + N].value) { box.checked = true; form.elements['per' + N].value = c['per' + N]; perInit(k); svcSync(k); } });
 }
 function delEquip(id) {
@@ -535,7 +586,7 @@ function editOS(id, preset = {}) {
     <div class="two">${sel('tipo', 'Tipo', ['Corretiva', 'Preventiva', 'Calibração', 'Qualificação térmica'], o.tipo)}${sel('prioridade', 'Prioridade', ['Normal', 'Alta', 'Urgente'], o.prioridade)}</div>
     <label>Descrição do problema / serviço<textarea name="descricao" rows="2" required>${esc(o.descricao)}</textarea></label>
     <div class="two">${fld('abertura', 'Abertura', o.abertura, 'datetime-local', 'required')}<label>Fechamento <b class="req" id="fecReq" hidden> *</b><small id="fecHint" class="l"></small><input name="fechamento" type="datetime-local" value="${esc(o.fechamento)}"></label></div>
-    <div class="two">${sel('status', 'Status', ['Aberta', 'Em andamento', 'Concluída'], o.status, 'onchange="osSync(true)"')}${sel('tecnico', 'Técnico responsável', [['', '- selecione -'], ...uniq([...db.tecnicos.map(t => t.nome), o.tecnico])], o.tecnico || '', 'required')}</div>
+    <div class="two">${sel('status', 'Status', ['Aberta', 'Em andamento', 'Concluída'], o.status, 'onchange="osSync(true)"')}${sel('tecnico', 'Técnico responsável', [['', '- selecione -'], ...uniq([...db.tecnicos.map(t => t.nome), o.tecnico])], o.tecnico || '')}</div>
     <label>Causa / solução aplicada (nos certificados: observações / notas técnicas)<textarea name="solucao" rows="2">${esc(o.solucao)}</textarea></label>
     <div class="two">${fld('custo', 'Custo (R$)', o.custo, 'number', 'min=0 step=0.01')}</div>
     ${chkBlock(o)}${calibBlock(o)}${qualBlock(o)}${corrBlock(o)}${encBlock(o)}`,
@@ -544,10 +595,11 @@ function editOS(id, preset = {}) {
       if (d.status !== 'Concluída') d.fechamento = '';
       else if (!d.fechamento) { alert('Informe a data de fechamento para concluir a OS.'); return false; }
       if (d.fechamento && new Date(d.fechamento) < new Date(d.abertura)) { alert('O fechamento não pode ser anterior à abertura.'); return false; }
+      if (d.status === 'Concluída' && d.tipo === 'Corretiva' && !(d.solucao || '').trim()) { alert('Para concluir a corretiva, informe a causa e a solução aplicada.'); return false; }
       if (!parseOSExtras(d, id ? o : null)) return false;
       let os = o;
       if (id) Object.assign(o, d); else { db.seq++; os = { id: uid(), numero: 'OS-' + String(db.seq).padStart(4, '0'), ...d }; db.os.push(os); }
-      const novas = abrirCorretivas(os);
+      const novas = abrirCorretivas(os), novaEnc = abrirCorretivaEnc(os);
       const eq = equipById(d.equipId);
       if (eq) {
         if (d.status === 'Concluída') {
@@ -560,11 +612,25 @@ function editOS(id, preset = {}) {
         if (eq.status !== 'Inativo') eq.status = aberta ? 'Em manutenção' : 'Operacional';
       }
       save();
+      if (novaEnc) alert(`Necessita de corretiva: foi aberta a OS corretiva ${novaEnc}, vinculada a ${os.numero}.`);
       if (novas.length) alert(`Item não conforme: ${novas.length > 1 ? 'foram abertas as OS corretivas' : 'foi aberta a OS corretiva'} ${novas.join(', ')}, vinculada${novas.length > 1 ? 's' : ''} à preventiva ${os.numero}.`);
     });
   osCli(document.querySelector('#form [name=clienteOS]').value, o.equipId);
-  osSync(false);
+  osSync(false); encSync();
   form.elements.abertura.addEventListener('input', () => osSync(false));
+  form.elements.tipo.addEventListener('change', () => osSync(false));
+  form.elements.equipId.addEventListener('change', () => osSync(false));
+}
+// calibração / qualificação com "necessita de corretiva = Sim": abre uma OS de corretiva vinculada (uma só; ao editar, atualiza o texto)
+function abrirCorretivaEnc(p) {
+  const en = p.encerr; if (!en || en.corr !== 'Sim') return '';
+  const txt = `Aberta devido ${p.tipo === 'Calibração' ? 'à calibração' : 'à qualificação térmica'} ${p.numero}: o equipamento necessita de corretiva. Justificativa: ${en.jCorr}`;
+  const ex = en.corrOsId && db.os.find(x => x.id === en.corrOsId);
+  if (ex) { if (ex.status !== 'Concluída') ex.descricao = txt; return ''; }
+  db.seq++;
+  const n = { id: uid(), numero: 'OS-' + String(db.seq).padStart(4, '0'), tipo: 'Corretiva', prioridade: 'Normal', status: 'Aberta', abertura: nowLocal(), fechamento: '', equipId: p.equipId, descricao: txt, tecnico: p.tecnico, solucao: '', custo: '', chk: null, qual: null, leituras: [], padraoIds: [], cals: [], padraoId: '', origemId: p.id, origemNum: p.numero };
+  db.os.push(n); en.corrOsId = n.id;
+  return n.numero;
 }
 // cada item NC da preventiva gera uma OS corretiva vinculada (uma só por item; ao editar, só atualiza o texto)
 function abrirCorretivas(p) {
@@ -581,14 +647,29 @@ function abrirCorretivas(p) {
   });
   return novas;
 }
+// marca um campo como obrigatório (atributo required + asterisco vermelho no rótulo)
+function marcaReq(el, obrig) { if (!el) return; el.required = obrig; const lb = el.closest('label'); if (!lb) return; let b = lb.querySelector('b.req.oc'); if (obrig && !b) { b = document.createElement('b'); b.className = 'req oc'; b.textContent = ' *'; lb.firstChild.after(b); } else if (!obrig && b) b.remove(); }
+const ehFreezer = e => !!e && /freezer|congelador/i.test(e.nome || '');
 function osSync(fromChange) {
+  if (typeof encSync === 'function') encSync();
+  if (typeof calRefSync === 'function') calRefSync();
   const st = form.elements.status.value, fec = form.elements.fechamento, on = st === 'Concluída';
   fec.disabled = !on; fec.required = on; fec.min = form.elements.abertura.value || '';
   $('#fecReq').hidden = !on;  $('#fecHint').textContent = on ? '' : ' (liberado quando o status for Concluída)';
+  // para concluir: técnico e (na preventiva) modelo de checklist passam a ser obrigatórios
+  const qual = form.elements.tipo.value === 'Qualificação térmica', eqSel = equipById(form.elements.equipId.value);
+  ['padraoQ', 'q_min', 'q_max', 'q_carga', 'q_dur', 'q_porta', 'q_ctrl', 'q_dados'].forEach(n => marcaReq(form.elements[n], on && qual));
+  const cal = form.elements.tipo.value === 'Calibração', np = +(form.elements.nPad && form.elements.nPad.value) || 1;
+  [0, 1, 2].forEach(i => ['padrao', 'grandeza', 'resolucao', 'ema', 'rp_0', 're_0'].forEach(n => marcaReq(form.elements['c' + i + '_' + n], on && cal && i < np)));
+  marcaReq(form.elements.solucao, on && form.elements.tipo.value === 'Corretiva'); // corretiva concluída: causa / solução obrigatória
+  marcaReq(form.elements.q_parada, on && qual && ehFreezer(eqSel)); // teste de parada: só freezer
+  marcaReq(form.elements.tecnico, on); marcaReq(form.elements.chkModelo, on && form.elements.tipo.value === 'Preventiva');
   if (!on) fec.value = '';
   else if (fromChange && !fec.value) { const n = nowLocal(), ab = form.elements.abertura.value; fec.value = ab && n < ab ? ab : n; }
 }
 function delOS(id) { if (confirm('Excluir esta OS?')) { db.os = db.os.filter(o => o.id !== id); save(); } }
+// OS ainda não concluída do mesmo equipamento e serviço (evita gerar a OS duas vezes pela Programação)
+const osAberta = (equipId, k) => db.os.find(o => o.equipId === equipId && o.tipo === KIND[k].tipo && o.status !== 'Concluída');
 function genOS(equipId, k) {
   tab = 'os'; render();
   editOS(null, { equipId, tipo: KIND[k].tipo, descricao: KIND[k].desc });
@@ -651,7 +732,7 @@ $('#importFile').onchange = async ev => {
     if (!confirm('Substituir todos os dados atuais pelo arquivo?')) return;
     const arqs = d._arquivos || {}; delete d._arquivos; d.padroes = (d.padroes || []).map(migraPad);
     for (const [fid, b64] of Object.entries(arqs)) await putFile(fid, b64Blob(b64, 'application/pdf'));
-    db = { seq: 0, padroes: [], clientes: [], checklists: [CHECKLIST_EXEMPLO], catalogo: CATALOGO_PADRAO.map(c => ({ ...c })), tecnicos: tecsPadrao(), ...d, empresa: { ...EMPRESA_PADRAO, ...(d.empresa || {}) } }; save();
+    db = { seq: 0, padroes: [], clientes: [], checklists: [], catalogo: CATALOGO_PADRAO.map(c => ({ ...c })), catalogoVer: 2, tecnicos: tecsPadrao(), ...d, empresa: { ...EMPRESA_PADRAO, ...(d.empresa || {}) } }; save();
   } catch { alert('Arquivo inválido.'); }
   ev.target.value = '';
 };
@@ -659,14 +740,14 @@ $('#demoBtn').onclick = () => {
   if (db.equip.length && !confirm('Isto substitui os dados atuais. Continuar?')) return;
   const e = (tag, nome, fab, mod, setor, crit, perPrev, perCal, off) => ({
     id: uid(), tag, nome, fabricante: fab, modelo: mod, serie: 'SN' + Math.floor(Math.random() * 90000 + 10000), setor, crit,
-    status: 'Operacional', clienteId: 'cli-demo', checklistId: tag === 'EQ-003' ? 'chk-exemplo' : '', aquisicao: addDays(today(), -900), perPrev, ultPrev: addDays(today(), -off), perCal, ultCal: addDays(today(), -off)
+    status: 'Operacional', clienteId: 'cli-demo', checklistId: '', aquisicao: addDays(today(), -900), perPrev, ultPrev: addDays(today(), -off), perCal, ultCal: addDays(today(), -off)
   });
   const pad = (tipo, nome, fab, mod, faixa, un, inc, validadeDias) => ({
     id: uid(), tipo, nome, fabricante: fab, modelo: mod, serie: 'P' + Math.floor(Math.random() * 9000 + 1000), codigo: 'Neo - ' + Math.floor(Math.random() * 90 + 10), selo: 'INM-' + Math.floor(Math.random() * 90000 + 10000),
     faixa, unidade: un, incerteza: inc, incU: +(inc.match(/[\d,.]+/) || ['0'])[0].replace(',', '.'), incK: 2, certNum: 'CAL-' + Math.floor(Math.random() * 9000 + 1000), laboratorio: 'Laboratório exemplo (RBC)',
     dataCal: addDays(today(), validadeDias - 365), validade: addDays(today(), validadeDias)
   });
-  db = { seq: 0, os: [], empresa: db.empresa, checklists: db.checklists, catalogo: db.catalogo, tecnicos: db.tecnicos,
+  db = { seq: 0, os: [], empresa: db.empresa, checklists: db.checklists, catalogo: db.catalogo, catalogoVer: db.catalogoVer, tecnicos: db.tecnicos,
     clientes: [{ id: 'cli-demo', nome: 'Cliente Exemplo', doc: '00.000.000/0001-00', endereco: 'Rua Exemplo, 100', cidade: 'Belém', uf: 'PA', cep: '66000-000', contato: '(91) 90000-0000' }],
     padroes: [
     pad('Termômetro', 'Termômetro padrão digital', 'Fluke', '1524', '-50 a 300', '°C', 'U = 0,05 °C', 200),
@@ -689,7 +770,7 @@ $('#demoBtn').onclick = () => {
   // 1) Corretiva
   mk(1, 'Corretiva', 40, 6, 450, 'Alarme de pressão intermitente', { solucao: 'Substituído o sensor de pressão e realizado teste funcional.' });
   // 2) Preventiva (checklist do equipamento)
-  const chk = db.checklists.find(x => x.id === 'chk-exemplo') || db.checklists[0];
+  const chk = db.checklists[0]; // o app não traz mais checklist de fábrica: com a lista vazia, a preventiva de exemplo fica sem checklist
   mk(2, 'Preventiva', 20, 3, 120, 'Preventiva semestral', chk ? { chk: { modeloId: chk.id, nome: chk.nome, itens: chk.itens.map((t, i) => ({ t, r: i === 5 ? 'NC' : 'C' })), instrumentos: chk.instrumentos.slice() } } : {});
   // 3) Calibração (termômetro, padrão de temperatura)
   const base = { padraoId: db.padroes[0].id, kfat: 2, resolucao: '0,1' };

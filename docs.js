@@ -38,6 +38,12 @@ let docOS = null;
 // imprime o documento já montado em #laudo; se a OS usa um padrão com PDFs anexados, as páginas desses PDFs entram depois do relatório (uma única impressão)
 async function doPrint() {
   try { await Promise.race([anexarPadrao(docOS), new Promise((_, rej) => setTimeout(() => rej(new Error('tempo esgotado')), 30000))]); } catch (e) { console.warn('anexos do padrão não incluídos', e); }
+  if (window.__loteCap) { await window.__loteCap(); return; } // download em lote: captura o documento em vez de abrir a impressão
+  // o navegador sugere o nome do arquivo a partir do título da página: Patrimônio - Equipamento - Serviço
+  const eq = equipById(docOS && docOS.equipId) || {}, antes = document.title;
+  const nome = [eq.tag, eq.nome, docOS && docOS.tipo].filter(Boolean).join(' - ').replace(/[\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+  if (nome) document.title = nome;
+  window.addEventListener('afterprint', () => { document.title = antes; }, { once: true });
   window.print();
 }
 async function anexarPadrao(o) {
@@ -74,7 +80,7 @@ function printLaudo(id) {
 
 // ---------- laudo genérico (corretiva e demais) ----------
 // aprovação e necessidade de corretiva (calibração e qualificação térmica)
-const encLinha = o => o.encerr && (o.encerr.aprov || o.encerr.corr) ? `<p style="font-size:11pt;margin:0 0 8pt"><b>Equipamento aprovado:</b> ${esc(o.encerr.aprov) || '-'} &nbsp;&nbsp;&nbsp; <b>Necessita de corretiva:</b> ${esc(o.encerr.corr) || '-'}</p>` : '';
+const encLinha = o => !(o.encerr && (o.encerr.aprov || o.encerr.corr)) ? '' : `<p style="font-size:11pt;margin:0 0 8pt"><b>Equipamento aprovado:</b> ${esc(o.encerr.aprov) || '-'} &nbsp;&nbsp;&nbsp; <b>Necessita de corretiva:</b> ${esc(o.encerr.corr) || '-'}</p>${o.encerr.jAprov ? `<p style="font-size:10.5pt;margin:0 0 6pt"><b>Motivo da não aprovação:</b> ${esc(o.encerr.jAprov)}</p>` : ''}${o.encerr.jCorr ? `<p style="font-size:10.5pt;margin:0 0 8pt"><b>Justificativa da corretiva:</b> ${esc(o.encerr.jCorr)}</p>` : ''}`;
 // perguntas de encerramento da corretiva
 function fechaHtml(o) {
   const c = o.fecha; if (!c) return '';
@@ -151,7 +157,7 @@ function printCert(o, e) {
   <p style="font-size:10pt;line-height:1.25;margin-top:4pt">Fator de abrangência utilizado: K = ${fmtNum(k)}. Níveis de confiança do fator de abrangência: K = 1 → 68%; K = 2 → 95%; K = 3 → 99,7%.</p>`;
   const fim = `<h4>NOTAS DEPARTAMENTO TÉCNICO</h4><p>${esc(o.solucao) || '&nbsp;'}</p>
   <table class="sg"><tr><td colspan="2">Responsável Técnico – ${esc(emp.respTec)}</td></tr>
-   <tr><td>Eng. Resp. ${esc(emp.engResp)}</td><td>${esc(emp.engCrea)}</td></tr>
+   ${emp.engResp || emp.engCrea ? `<tr><td>Eng. Resp. ${esc(emp.engResp)}</td><td>${esc(emp.engCrea)}</td></tr>` : ''}
    <tr><td colspan="2">Técnico Coletor de dados: ${esc(tec)}${tecRegistro(tec) ? ' – ' + esc(tecRegistro(tec)) : ''}</td></tr></table>
   ${encLinha(o)}
   <div class="cs"><div><div class="im">${sigImgs()}${tecAssinatura(tec)}</div><div class="ln">Responsável Técnico<br><b>${esc(emp.respTec)}</b></div></div>
